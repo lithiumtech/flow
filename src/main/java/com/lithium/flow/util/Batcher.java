@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -71,6 +72,28 @@ public class Batcher<T> {
 		if (toReturn == POISON_PILL) {
 			batchQueue.offer(POISON_PILL);
 			return null;
+		}
+		return toReturn;
+	}
+
+	@Nullable
+	public Batch<T> poll(long timeout, TimeUnit unit) throws InterruptedException {
+		Batch<T> toReturn = batchQueue.poll(timeout, unit);
+		if (toReturn == POISON_PILL) {
+			batchQueue.offer(POISON_PILL);
+			return null;
+		} else if (toReturn == null) {
+			// lock the batcher so we can drain a partial batch
+			synchronized (this) {
+				if (currentBatch.size() == 0) {
+					// return a static empty batch
+					// it's ok to return the poison pill since batches are immutable for consumers
+					toReturn = POISON_PILL;
+				} else {
+					toReturn = currentBatch;
+					currentBatch = new Batch<>(batchSize);
+				}
+			}
 		}
 		return toReturn;
 	}

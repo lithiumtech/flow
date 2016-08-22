@@ -109,7 +109,7 @@ public class SqlTable implements Table {
 		String query = buildInsertQuery(columns);
 		log.debug("insert: {} {}", query, params);
 
-		Unchecked.run(() -> schema.update(query, params));
+		Unchecked.run(() -> schema.update(query, params.toArray()));
 	}
 
 	@Override
@@ -161,7 +161,7 @@ public class SqlTable implements Table {
 		String query = buildUpdateQuery(columns);
 		log.debug("update: {} {}", query, params);
 
-		Unchecked.run(() -> schema.update(query, params));
+		Unchecked.run(() -> schema.update(query, params.toArray()));
 	}
 
 	@Override

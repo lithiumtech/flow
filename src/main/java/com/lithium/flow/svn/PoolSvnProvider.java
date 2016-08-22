@@ -27,6 +27,7 @@ import org.apache.commons.pool2.BasePooledObjectFactory;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
+import org.tmatesoft.svn.core.SVNException;
 import org.tmatesoft.svn.core.SVNURL;
 import org.tmatesoft.svn.core.io.SVNRepository;
 
@@ -81,6 +82,16 @@ public class PoolSvnProvider extends BasePooledObjectFactory<SVNRepository> impl
 	public void destroyObject(@Nonnull PooledObject<SVNRepository> pooled) throws Exception {
 		SVNRepository repository = pooled.getObject();
 		delegate.releaseRepository(repository);
+	}
+
+	@Override
+	public boolean validateObject(@Nonnull PooledObject<SVNRepository> repository) {
+		try {
+			repository.getObject().testConnection();
+			return true;
+		} catch (SVNException e) {
+			return false;
+		}
 	}
 
 	@Override

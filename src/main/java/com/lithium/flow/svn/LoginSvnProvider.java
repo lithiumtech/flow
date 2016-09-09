@@ -75,6 +75,7 @@ public class LoginSvnProvider implements SvnProvider {
 		try {
 			SVNRepository repository = SVNRepositoryFactory.create(url);
 			repository.setAuthenticationManager(authManager);
+			repository.testConnection();
 			return repository;
 		} catch (SVNException e) {
 			throw new IOException("failed to created repository: " + url, e);

@@ -78,7 +78,7 @@ public class ShellAccess implements Access {
 				.setKeyPath(keyPath).setPass(pass).setKey(key).build();
 
 		if (keyPath != null && !keyPath.isEmpty()) {
-			if (new File(keyPath).exists()) {
+			if (new File(keyPath).isFile()) {
 				pass = prompt(keyPath, "Enter passphrase for {name}: ", Prompt.Type.MASKED);
 			} else {
 				pass = prompt("pass[" + keyPath + "]", "Enter passphrase for {name}: ", Prompt.Type.MASKED);

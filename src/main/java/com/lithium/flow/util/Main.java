@@ -60,18 +60,24 @@ public interface Main {
 	static <T> T run(@Nonnull Class<T> clazz) {
 		checkNotNull(clazz);
 		AtomicReference<T> ref = new AtomicReference<>();
-		run(clazz, config -> {
-			try {
-				ref.set(clazz.getDeclaredConstructor(Config.class).newInstance(config));
-			} catch (NoSuchMethodException e) {
-				ref.set(clazz.getDeclaredConstructor().newInstance());
-			}
-
-			if (ref.get() instanceof Main) {
-				((Main) ref.get()).main(config);
-			}
-		});
+		run(clazz, config -> ref.set(run(clazz, config)));
 		return ref.get();
+	}
+
+	@Nonnull
+	static <T> T run(@Nonnull Class<T> clazz, @Nonnull Config config) throws Exception {
+		T instance;
+		try {
+			instance = clazz.getDeclaredConstructor(Config.class).newInstance(config);
+		} catch (NoSuchMethodException e) {
+			instance = clazz.getDeclaredConstructor().newInstance();
+		}
+
+		if (instance instanceof Main) {
+			((Main) instance).main(config);
+		}
+
+		return instance;
 	}
 
 	static void run(@Nonnull CheckedConsumer<Config, Exception> callback) {

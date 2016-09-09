@@ -40,7 +40,8 @@ public class CronMain {
 	private final String cron;
 	private final TimeZone timeZone;
 
-	public CronMain(@Nonnull Config config) {
+	public CronMain(@Nonnull Config config) throws ClassNotFoundException {
+		Class clazz = Class.forName(config.getString("run.class"));
 		boolean now = config.getBoolean("run.now", false);
 		cron = config.getString("run.cron", "");
 		timeZone = config.containsKey("run.tz")
@@ -53,7 +54,7 @@ public class CronMain {
 		Runnable runnable = () -> {
 			if (semaphore.tryAcquire()) {
 				try {
-					Main.run(config.getString("run.class"));
+					Main.run(clazz, config);
 					logNextRun();
 				} catch (Exception e) {
 					log.warn("cron run failed", e);

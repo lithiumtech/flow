@@ -68,6 +68,8 @@ public class JettyClient extends BasePooledObjectFactory<Session> implements Clo
 		client = new WebSocketClient(new SslContextFactory());
 		client.getPolicy().setMaxTextMessageSize(config.getInt("maxTextMessageSize", 1024 * 1024));
 		client.getPolicy().setIdleTimeout(config.getTime("idleTimeout", "1h"));
+		client.getPolicy().setAsyncWriteTimeout(config.getTime("asyncWriteTimeout", "1m"));
+		client.setConnectTimeout(config.getTime("connectTimeout", "15s"));
 		Unchecked.run(client::start);
 
 		pool = new ConfigObjectPool2<>(this, config);

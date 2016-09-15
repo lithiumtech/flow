@@ -20,29 +20,34 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.IntFunction;
 
 import javax.annotation.Nonnull;
 
 /**
  * @author Matt Ayres
  */
-public class RetryingFunction<T, R, E extends Exception> {
+public class RetryingFunction<T, R, E extends Exception> implements CheckedFunction<T, R, E> {
+	private final IntFunction<Number> delay;
 	private final CheckedFunction<T, R, E> function;
 	private final int tries;
-	private final long delay;
 
 	public RetryingFunction(int tries, @Nonnull CheckedFunction<T, R, E> function) {
 		this(tries, 0, function);
 	}
 
 	public RetryingFunction(int tries, long delay, @Nonnull CheckedFunction<T, R, E> function) {
+		this(tries, i -> delay, function);
+	}
+
+	public RetryingFunction(int tries, @Nonnull IntFunction<Number> delay, @Nonnull CheckedFunction<T, R, E> function) {
+		this.delay = checkNotNull(delay);
 		this.function = checkNotNull(function);
 		this.tries = tries;
-		this.delay = delay;
 	}
 
 	@Nonnull
-	public R get(@Nonnull T input) throws E {
+	public R apply(@Nonnull T input) throws E {
 		checkNotNull(input);
 
 		if (tries == 1) {
@@ -51,7 +56,7 @@ public class RetryingFunction<T, R, E extends Exception> {
 
 		List<Exception> exceptions = null;
 
-		int i = tries;
+		int i = 0;
 		do {
 			try {
 				return function.apply(input);
@@ -61,12 +66,17 @@ public class RetryingFunction<T, R, E extends Exception> {
 				}
 				exceptions.add(e);
 
-				if (!Sleep.softly(delay)) {
+				if (!Sleep.softly(delay.apply(i).longValue())) {
 					break;
 				}
 			}
-		} while (--i > 0);
+		} while (++i < tries);
 
 		throw new RetryingException(exceptions);
+	}
+
+	@Nonnull
+	public R get(@Nonnull T input) throws E {
+		return apply(input);
 	}
 }

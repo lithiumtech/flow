@@ -16,55 +16,30 @@
 
 package com.lithium.flow.util;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import java.util.ArrayList;
-import java.util.List;
+import java.util.function.IntFunction;
 
 import javax.annotation.Nonnull;
 
 /**
  * @author Matt Ayres
  */
-public class RetryingSupplier<T, E extends Exception> {
-	private final CheckedSupplier<T, E> supplier;
-	private final int tries;
-	private final long delay;
+public class RetryingSupplier<T, E extends Exception> implements CheckedSupplier<T, E> {
+	private final RetryingFunction<String, T, E> function;
 
 	public RetryingSupplier(int tries, @Nonnull CheckedSupplier<T, E> supplier) {
 		this(tries, 0, supplier);
 	}
 
 	public RetryingSupplier(int tries, long delay, @Nonnull CheckedSupplier<T, E> supplier) {
-		this.supplier = checkNotNull(supplier);
-		this.tries = tries;
-		this.delay = delay;
+		this(tries, i -> delay, supplier);
+	}
+
+	public RetryingSupplier(int tries, @Nonnull IntFunction<Number> delay, @Nonnull CheckedSupplier<T, E> supplier) {
+		function = new RetryingFunction<>(tries, delay, x -> supplier.get());
 	}
 
 	@Nonnull
 	public T get() throws E {
-		if (tries == 1) {
-			return supplier.get();
-		}
-
-		List<Exception> exceptions = null;
-
-		int i = tries;
-		do {
-			try {
-				return supplier.get();
-			} catch (Exception e) {
-				if (exceptions == null) {
-					exceptions = new ArrayList<>();
-				}
-				exceptions.add(e);
-
-				if (!Sleep.softly(delay)) {
-					break;
-				}
-			}
-		} while (--i > 0);
-
-		throw new RetryingException(exceptions);
+		return function.get("");
 	}
 }

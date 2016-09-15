@@ -105,6 +105,10 @@ public class LoopQueue<T> {
 		Sleep.until(() -> queue.size() < capacity && queue.offer(element));
 	}
 
+	public int size() {
+		return queue.size();
+	}
+
 	public void finish() {
 		finish = true;
 		Sleep.until(queue::isEmpty);

@@ -92,7 +92,8 @@ public class ElasticTable implements Table {
 			for (String column : row.columns()) {
 				content.field(column, row.getCell(column, Object.class));
 			}
-			return client.prepareIndex(index, type, row.getKey().id()).setSource(content.endObject());
+			String id = row.getKey().isAuto() ? null : row.getKey().id();
+			return client.prepareIndex(index, type, id).setSource(content.endObject());
 		});
 	}
 

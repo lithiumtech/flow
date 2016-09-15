@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 import javax.annotation.Nonnull;
 
@@ -39,10 +40,12 @@ public class Key {
 
 	private final List<Object> values;
 	private final String id;
+	private final boolean auto;
 
-	private Key(@Nonnull List<Object> values) {
+	private Key(@Nonnull List<Object> values, boolean auto) {
 		this.values = checkNotNull(values);
 		this.id = ID_JOINER.join(values);
+		this.auto = auto;
 	}
 
 	@Nonnull
@@ -60,6 +63,10 @@ public class Key {
 		return id;
 	}
 
+	public boolean isAuto() {
+		return auto;
+	}
+
 	@Override
 	public String toString() {
 		return ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE);
@@ -68,7 +75,7 @@ public class Key {
 	@Nonnull
 	public static Key of(@Nonnull Object value) {
 		checkNotNull(value);
-		return new Key(Collections.singletonList(value));
+		return new Key(Collections.singletonList(value), false);
 	}
 
 	@Nonnull
@@ -81,13 +88,18 @@ public class Key {
 		List<Object> values = Lists.newArrayList();
 		values.add(firstValue);
 		Collections.addAll(values, moreValues);
-		return new Key(values);
+		return new Key(values, false);
 	}
 
 	@Nonnull
 	public static Key from(@Nonnull String id) {
 		checkNotNull(id);
-		return new Key(Lists.newArrayList(ID_SPLITTER.split(id).iterator()));
+		return new Key(Lists.newArrayList(ID_SPLITTER.split(id).iterator()), false);
+	}
+
+	@Nonnull
+	public static Key auto() {
+		return new Key(Collections.singletonList(UUID.randomUUID().toString()), true);
 	}
 
 	@Override

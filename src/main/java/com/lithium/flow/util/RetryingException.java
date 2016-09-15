@@ -17,13 +17,13 @@
 package com.lithium.flow.util;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.util.stream.Collectors.toSet;
 
 import java.util.List;
 
 import javax.annotation.Nonnull;
 
-import com.google.common.base.Joiner;
+import com.google.common.collect.LinkedHashMultiset;
+import com.google.common.collect.Multiset;
 
 /**
  * @author Matt Ayres
@@ -42,8 +42,9 @@ class RetryingException extends RuntimeException {
 
 	@Override
 	public String getMessage() {
-		return "Failed after " + exceptions.size() + " tries: "
-				+ Joiner.on(", ").join(exceptions.stream().map(Throwable::getMessage).collect(toSet()));
+		Multiset<String> multiset = LinkedHashMultiset.create();
+		exceptions.forEach(e -> multiset.add(e.getMessage() == null ? e.getClass().getName() : e.getMessage()));
+		return "Failed after " + exceptions.size() + " tries: " + multiset;
 	}
 
 	@Override

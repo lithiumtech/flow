@@ -38,6 +38,7 @@ import com.google.common.base.Charsets;
  */
 public class CsvOutputTable implements Table {
 	private final CSVPrinter printer;
+	private boolean needsHeader;
 
 	public CsvOutputTable(@Nonnull OutputStream out) throws IOException {
 		this(out, Configs.empty());
@@ -46,12 +47,14 @@ public class CsvOutputTable implements Table {
 	public CsvOutputTable(@Nonnull OutputStream out, @Nonnull Config config) throws IOException {
 		Writer writer = new OutputStreamWriter(out, Charsets.UTF_8);
 		printer = new CSVPrinter(writer, CsvFormats.fromConfig(config));
+		needsHeader = config.getBoolean("csv.autoHeader", false);
 	}
 
 	@Override
 	public void putRow(@Nonnull Row row) {
 		Unchecked.run(() -> {
 			synchronized (printer) {
+				addHeader(row);
 				printer.printRecord(row);
 			}
 		});
@@ -61,11 +64,19 @@ public class CsvOutputTable implements Table {
 	public void putRows(@Nonnull List<Row> rows) {
 		Unchecked.run(() -> {
 			synchronized (printer) {
+				addHeader(rows.get(0));
 				for (Row row : rows) {
 					printer.printRecord(row);
 				}
 			}
 		});
+	}
+
+	private void addHeader(@Nonnull Row row) throws IOException {
+		if (needsHeader) {
+			printer.printRecord(row.columns());
+			needsHeader = false;
+		}
 	}
 
 	@Override

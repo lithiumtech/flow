@@ -38,7 +38,6 @@ public class RetryingSupplier<T, E extends Exception> implements CheckedSupplier
 		function = new RetryingFunction<>(tries, delay, x -> supplier.get());
 	}
 
-	@Nonnull
 	public T get() throws E {
 		return function.get("");
 	}

@@ -46,7 +46,6 @@ public class RetryingFunction<T, R, E extends Exception> implements CheckedFunct
 		this.tries = tries;
 	}
 
-	@Nonnull
 	public R apply(@Nonnull T input) throws E {
 		checkNotNull(input);
 
@@ -75,7 +74,6 @@ public class RetryingFunction<T, R, E extends Exception> implements CheckedFunct
 		throw new RetryingException(exceptions);
 	}
 
-	@Nonnull
 	public R get(@Nonnull T input) throws E {
 		return apply(input);
 	}

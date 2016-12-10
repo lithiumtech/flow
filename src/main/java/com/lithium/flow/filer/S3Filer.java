@@ -98,19 +98,24 @@ public class S3Filer implements Filer {
 	@Override
 	@Nonnull
 	public List<Record> listRecords(@Nonnull String path) throws IOException {
-		ObjectListing listing = s3.listObjects(
-				new ListObjectsRequest().withBucketName(bucket).withPrefix(path.substring(1)));
+		String s3Path = path.equals("/") ? "" : path.substring(1) + "/";
+		ObjectListing listing = s3.listObjects(new ListObjectsRequest()
+				.withBucketName(bucket).withPrefix(s3Path).withDelimiter("/"));
 
-		List<Record> records = Lists.newArrayList();
+		List<Record> records = new ArrayList<>();
+
+		for (String dir : listing.getCommonPrefixes()) {
+			String name = dir.replaceFirst(s3Path, "").replace("/", "");
+			records.add(new Record(uri, path, name, 0, 0, true));
+		}
+
 		for (S3ObjectSummary summary : listing.getObjectSummaries()) {
-			File file = new File(summary.getKey());
-			String parent = file.getParent();
-			String name = file.getName();
+			String name = new File(summary.getKey()).getName();
 			long time = summary.getLastModified().getTime();
 			long size = summary.getSize();
-			boolean directory = name.endsWith("/");
-			records.add(new Record(uri, "/" + parent, name, time, size, directory));
+			records.add(new Record(uri, path, name, time, size, false));
 		}
+
 		return records;
 	}
 

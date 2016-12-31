@@ -18,14 +18,9 @@ package com.lithium.flow.store;
 
 import static com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.nio.file.attribute.PosixFilePermission.GROUP_READ;
-import static java.nio.file.attribute.PosixFilePermission.GROUP_WRITE;
-import static java.nio.file.attribute.PosixFilePermission.OWNER_READ;
-import static java.nio.file.attribute.PosixFilePermission.OWNER_WRITE;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -34,7 +29,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Sets;
 
 /**
  * @author Matt Ayres
@@ -86,8 +80,6 @@ public class FileStore implements Store {
 	private void write(@Nonnull Map<String, String> map) {
 		try {
 			mapper.writeValue(file, map);
-			Files.setPosixFilePermissions(file.toPath(), Sets.newHashSet(
-					OWNER_READ, OWNER_WRITE, GROUP_READ, GROUP_WRITE));
 		} catch (IOException e) {
 			throw new StoreException("failed to write " + file, e);
 		}

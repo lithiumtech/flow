@@ -27,6 +27,7 @@ import java.util.stream.IntStream;
 
 import javax.annotation.Nonnull;
 
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 
@@ -48,7 +49,7 @@ public class HostUtils {
 			List<String> includes = Lists.newArrayList();
 			List<String> excludes = Lists.newArrayList();
 
-			for (String range : Splitter.on(',').split(ranges)) {
+			for (String range : Splitter.on(CharMatcher.anyOf(",;")).split(ranges)) {
 				List<String> list = range.startsWith("!") ? excludes : includes;
 				range = range.replace("!", "");
 

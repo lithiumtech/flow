@@ -77,7 +77,7 @@ public class Shells {
 			tunneler = new AutoTunneler(tunneler, config.getTime("tunnel.auto.timeout", "5s"));
 		}
 		if (config.getBoolean("tunnel.cache", true)) {
-			tunneler = new CachedTunneler(tunneler);
+			tunneler = new CachedTunneler(config, tunneler);
 		}
 		return tunneler;
 	}

@@ -18,11 +18,12 @@ package com.lithium.flow.shell.tunnel;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.lithium.flow.config.Config;
+import com.lithium.flow.config.Configs;
 import com.lithium.flow.shell.Tunnel;
 import com.lithium.flow.shell.Tunneler;
-import com.lithium.flow.util.Caches;
-import com.lithium.flow.util.Unchecked;
-import com.lithium.flow.util.UncheckedException;
+import com.lithium.flow.shell.cache.DisposableTunnel;
+import com.lithium.flow.util.Recycler;
 
 import java.io.IOException;
 
@@ -31,32 +32,31 @@ import javax.annotation.Nullable;
 
 import org.apache.commons.lang3.tuple.Triple;
 
-import com.google.common.cache.LoadingCache;
-
 /**
  * @author Matt Ayres
  */
 public class CachedTunneler implements Tunneler {
 	private final Tunneler delegate;
-	private final LoadingCache<Triple<String, Integer, String>, Tunnel> tunnels;
+	private final Recycler<Triple<String, Integer, String>, Tunnel> tunnels;
 
 	public CachedTunneler(@Nonnull Tunneler delegate) {
+		this(Configs.empty(), delegate);
+	}
+
+	public CachedTunneler(@Nonnull Config config, @Nonnull Tunneler delegate) {
 		this.delegate = checkNotNull(delegate);
-		tunnels = Caches.build(triple -> delegate.getTunnel(triple.getLeft(), triple.getMiddle(), triple.getRight()));
+		tunnels = new Recycler<>(config, t -> delegate.getTunnel(t.getLeft(), t.getMiddle(), t.getRight()));
 	}
 
 	@Override
 	@Nonnull
 	public Tunnel getTunnel(@Nonnull String host, int port, @Nullable String through) throws IOException {
-		try {
-			return Unchecked.get(() -> tunnels.get(Triple.of(host, port, through)));
-		} catch (UncheckedException e) {
-			throw e.unwrap(IOException.class);
-		}
+		return new DisposableTunnel(tunnels.get(Triple.of(host, port, through)));
 	}
 
 	@Override
 	public void close() throws IOException {
+		tunnels.close();
 		delegate.close();
 	}
 }

@@ -85,8 +85,8 @@ public class Caches {
 		try {
 			return cache.get(key);
 		} catch (ExecutionException e) {
-			Throwables.propagateIfInstanceOf(e.getCause(), clazz);
-			throw Throwables.propagate(e.getCause());
+			Throwables.throwIfInstanceOf(e.getCause(), clazz);
+			throw new RuntimeException(e.getCause());
 		}
 	}
 }

@@ -36,6 +36,7 @@ import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 
 import net.schmizz.concurrent.Event;
+import net.schmizz.sshj.common.LoggerFactory;
 import net.schmizz.sshj.common.SSHPacket;
 import net.schmizz.sshj.common.StreamCopier;
 import net.schmizz.sshj.connection.Connection;
@@ -99,12 +100,10 @@ public class SshjTunnel extends Thread implements Tunnel {
 
 		socket.setSendBufferSize(channel.getLocalMaxPacketSize());
 		socket.setReceiveBufferSize(channel.getRemoteMaxPacketSize());
-		Event<IOException> soc2chan = new StreamCopier(socket.getInputStream(), channel.getOutputStream())
-				.bufSize(channel.getRemoteMaxPacketSize())
-				.spawnDaemon("soc2chan");
-		Event<IOException> chan2soc = new StreamCopier(channel.getInputStream(), socket.getOutputStream())
-				.bufSize(channel.getLocalMaxPacketSize())
-				.spawnDaemon("chan2soc");
+		Event<IOException> soc2chan = new StreamCopier(socket.getInputStream(), channel.getOutputStream(),
+				LoggerFactory.DEFAULT).bufSize(channel.getRemoteMaxPacketSize()).spawnDaemon("soc2chan");
+		Event<IOException> chan2soc = new StreamCopier(channel.getInputStream(), socket.getOutputStream(),
+				LoggerFactory.DEFAULT).bufSize(channel.getLocalMaxPacketSize()).spawnDaemon("chan2soc");
 		SocketStreamCopyMonitor.monitor(5, TimeUnit.SECONDS, soc2chan, chan2soc, channel, socket);
 	}
 

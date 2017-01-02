@@ -76,7 +76,7 @@ public class SshjFiler implements Filer {
 
 	@Nonnull
 	private Record getRecord(@Nonnull RemoteResourceInfo info) {
-		if (info.getAttributes().getType() == FileMode.Type.SYMKLINK) {
+		if (info.getAttributes().getType() == FileMode.Type.SYMLINK) {
 			return Unchecked.get(() -> getRecord(info.getPath()));
 		}
 

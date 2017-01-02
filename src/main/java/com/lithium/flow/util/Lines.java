@@ -68,7 +68,7 @@ public class Lines {
 				consumer.accept(it.nextLine());
 			}
 		} catch (IllegalStateException e) {
-			Throwables.propagateIfInstanceOf(e.getCause(), IOException.class);
+			Throwables.throwIfInstanceOf(e.getCause(), IOException.class);
 			throw new IOException(e);
 		} finally {
 			it.close();

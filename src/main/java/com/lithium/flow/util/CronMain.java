@@ -41,15 +41,16 @@ public class CronMain {
 	private final TimeZone timeZone;
 
 	public CronMain(@Nonnull Config config) throws ClassNotFoundException {
-		Class clazz = Class.forName(config.getString("run.class"));
+		Class<?> clazz = Class.forName(config.getString("run.class"));
 		boolean now = config.getBoolean("run.now", false);
 		cron = config.getString("run.cron", "");
 		timeZone = config.containsKey("run.tz")
 				? TimeZone.getTimeZone(config.getString("run.tz"))
 				: TimeZone.getDefault();
 
-		boolean overlap = config.getBoolean("run.overlap", false);
-		Semaphore semaphore = new Semaphore(overlap ? Integer.MAX_VALUE : 1);
+		boolean overlap = config.getBoolean("run.overlap", false); // deprecated, use run.concurrent
+		int concurrent = config.getInt("run.concurrent", overlap ? Integer.MAX_VALUE : 1);
+		Semaphore semaphore = new Semaphore(concurrent);
 
 		Runnable runnable = () -> {
 			if (semaphore.tryAcquire()) {

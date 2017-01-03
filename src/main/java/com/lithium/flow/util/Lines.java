@@ -23,6 +23,9 @@ import com.lithium.flow.io.InputStreamSpliterator;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -31,17 +34,18 @@ import javax.annotation.Nonnull;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 
 /**
  * @author Matt Ayres
  */
 public class Lines {
+	private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
+
 	@Nonnull
 	public static Stream<String> stream(@Nonnull InputStream in) throws IOException {
 		checkNotNull(in);
-		return stream(in, Charsets.UTF_8);
+		return stream(in, DEFAULT_CHARSET);
 	}
 
 	@Nonnull
@@ -53,7 +57,9 @@ public class Lines {
 
 	public static void accept(@Nonnull InputStream in,
 			@Nonnull CheckedConsumer<String, IOException> consumer) throws IOException {
-		accept(in, Charsets.UTF_8, consumer);
+		checkNotNull(in);
+		checkNotNull(consumer);
+		accept(in, DEFAULT_CHARSET, consumer);
 	}
 
 	public static void accept(@Nonnull InputStream in, @Nonnull Charset charset,
@@ -73,5 +79,42 @@ public class Lines {
 		} finally {
 			it.close();
 		}
+	}
+
+	@Nonnull
+	public static Iterable<String> iterate(@Nonnull InputStream in) throws IOException {
+		checkNotNull(in);
+		return iterate(in, DEFAULT_CHARSET);
+	}
+
+	@Nonnull
+	public static Iterable<String> iterate(@Nonnull InputStream in, @Nonnull Charset charset) throws IOException {
+		checkNotNull(in);
+		checkNotNull(charset);
+
+		LineIterator it = IOUtils.lineIterator(in, charset);
+		AtomicBoolean used = new AtomicBoolean();
+
+		return () -> {
+			if (used.getAndSet(true)) {
+				throw new RuntimeException("this iterable can only be used once");
+			}
+
+			return new Iterator<String>() {
+				@Override
+				public boolean hasNext() {
+					boolean next = it.hasNext();
+					if (!next) {
+						it.close();
+					}
+					return next;
+				}
+
+				@Override
+				public String next() {
+					return it.nextLine();
+				}
+			};
+		};
 	}
 }

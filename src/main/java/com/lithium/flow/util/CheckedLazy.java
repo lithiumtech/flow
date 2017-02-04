@@ -33,13 +33,16 @@ public class CheckedLazy<T, E extends Exception> {
 
 	@Nonnull
 	public T get() throws E {
-		if (object == null) {
+		T result = object;
+		if (result == null) {
 			synchronized (this) {
-				if (object == null) {
-					object = checkNotNull(supplier.get());
+				result = object;
+				if (result == null) {
+					result = checkNotNull(supplier.get());
+					object = result;
 				}
 			}
 		}
-		return object;
+		return result;
 	}
 }

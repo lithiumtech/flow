@@ -56,7 +56,6 @@ import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.google.common.collect.Lists;
 
 /**
  * @author Matt Ayres
@@ -72,13 +71,24 @@ public class S3Filer implements Filer {
 	public S3Filer(@Nonnull Config config, @Nonnull Access access) {
 		checkNotNull(config);
 		checkNotNull(access);
-		uri = URI.create(config.getString("url"));
+
+		String url = config.getString("url");
+		int index = url.indexOf("://");
+		if (index > -1) {
+			index = url.indexOf("/", index + 3);
+			if (index > -1) {
+				url = url.substring(0, index);
+			}
+		}
+		uri = URI.create(url);
+
 		bucket = uri.getHost();
 		partSize = config.getInt("s3.partSize", 5 * 1024 * 1024);
 		tempDir = new File(config.getString("s3.tempDir", System.getProperty("java.io.tmpdir")));
 		service = Executors.newFixedThreadPool(config.getInt("s3.threads", 1));
 
 		AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard();
+
 		String key = config.getString("aws.key", null);
 		if (key != null) {
 			String secret = config.getString("aws.secret", null);
@@ -87,6 +97,12 @@ public class S3Filer implements Filer {
 			}
 			builder.withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(key, secret)));
 		}
+
+		String region = config.getString("aws.region", null);
+		if (region != null) {
+			builder.withRegion(region);
+		}
+
 		s3 = builder.build();
 	}
 
@@ -99,7 +115,7 @@ public class S3Filer implements Filer {
 	@Override
 	@Nonnull
 	public List<Record> listRecords(@Nonnull String path) throws IOException {
-		String s3Path = path.equals("/") ? "" : path.substring(1) + "/";
+		String s3Path = path.isEmpty() || path.equals("/") ? "" : path.substring(1) + "/";
 		ObjectListing listing = s3.listObjects(new ListObjectsRequest()
 				.withBucketName(bucket).withPrefix(s3Path).withDelimiter("/"));
 
@@ -123,8 +139,21 @@ public class S3Filer implements Filer {
 	@Override
 	@Nonnull
 	public Record getRecord(@Nonnull String path) throws IOException {
-		List<Record> records = listRecords(path);
-		return records.size() == 0 ? Record.noFile(uri, path) : records.get(0);
+		ObjectListing listing = s3.listObjects(
+				new ListObjectsRequest().withBucketName(bucket).withPrefix(path.substring(1)));
+
+		S3ObjectSummary summary = listing.getObjectSummaries().stream().findFirst().orElse(null);
+		if (summary == null) {
+			return Record.noFile(uri, path);
+		}
+
+		File file = new File(summary.getKey());
+		String parent = file.getParent();
+		String name = file.getName();
+		long time = summary.getLastModified().getTime();
+		long size = summary.getSize();
+		boolean directory = name.endsWith("/");
+		return new Record(uri, "/" + parent, name, time, size, directory);
 	}
 
 	@Override
@@ -150,13 +179,13 @@ public class S3Filer implements Filer {
 			}
 
 			@Override
-			public void write(byte[] b) throws IOException {
+			public void write(@Nonnull byte[] b) throws IOException {
 				baos.write(b);
 				flip(partSize);
 			}
 
 			@Override
-			public void write(byte[] b, int off, int len) throws IOException {
+			public void write(@Nonnull byte[] b, int off, int len) throws IOException {
 				baos.write(b, off, len);
 				flip(partSize);
 			}
@@ -171,7 +200,7 @@ public class S3Filer implements Filer {
 				} else {
 					flip(1);
 
-					List<PartETag> tags = Lists.newArrayList();
+					List<PartETag> tags = new ArrayList<>();
 					for (Future<PartETag> futureTag : futureTags) {
 						try {
 							tags.add(futureTag.get());
@@ -208,11 +237,11 @@ public class S3Filer implements Filer {
 						.withFile(file);
 
 				futureTags.add(service.submit(() -> {
-					try {
-						return s3.uploadPart(uploadRequest).getPartETag();
-					} finally {
-						file.delete();
+					PartETag tag = s3.uploadPart(uploadRequest).getPartETag();
+					if (!file.delete()) {
+						throw new IOException("failed to delete: " + file.getPath());
 					}
+					return tag;
 				}));
 			}
 		};

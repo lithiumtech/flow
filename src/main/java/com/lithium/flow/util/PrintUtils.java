@@ -18,12 +18,18 @@ package com.lithium.flow.util;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.text.NumberFormat;
+import java.util.Locale;
+
 import javax.annotation.Nonnull;
 
 /**
  * @author Matt Ayres
  */
 public class PrintUtils {
+	private static final ThreadLocal<NumberFormat> COMMA_FORMAT_TL =
+			ThreadLocal.withInitial(() -> NumberFormat.getNumberInstance(Locale.US));
+
 	@Nonnull
 	public static String bytes(@Nonnull Number bytes) {
 		checkNotNull(bytes);
@@ -34,6 +40,12 @@ public class PrintUtils {
 	public static String count(@Nonnull Number count) {
 		checkNotNull(count);
 		return format(count, 1000, "KMBTQ", "");
+	}
+
+	@Nonnull
+	public static String commas(@Nonnull Number count) {
+		checkNotNull(count);
+		return COMMA_FORMAT_TL.get().format(count);
 	}
 
 	@Nonnull
@@ -50,7 +62,10 @@ public class PrintUtils {
 		}
 	}
 
-	public static String time(Number time) {
+	@Nonnull
+	public static String time(@Nonnull Number time) {
+		checkNotNull(time);
+
 		long value = time.longValue();
 		long seconds = (value / 1000L) % 60;
 		long minutes = (value / 60000L) % 60;

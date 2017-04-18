@@ -70,7 +70,7 @@ public abstract class AbstractSchema implements Schema {
 	@Override
 	public long selectLong(@Nonnull String query, Object... parameters) throws SQLException {
 		AtomicLong value = new AtomicLong();
-		queryRows(query, rs -> value.set(rs.getInt(1)), parameters);
+		queryRows(query, rs -> value.set(rs.getLong(1)), parameters);
 		return value.get();
 	}
 

@@ -42,9 +42,10 @@ import java.util.concurrent.Future;
 
 import javax.annotation.Nonnull;
 
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
@@ -77,16 +78,16 @@ public class S3Filer implements Filer {
 		tempDir = new File(config.getString("s3.tempDir", System.getProperty("java.io.tmpdir")));
 		service = Executors.newFixedThreadPool(config.getInt("s3.threads", 1));
 
+		AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard();
 		String key = config.getString("aws.key", null);
 		if (key != null) {
 			String secret = config.getString("aws.secret", null);
 			if (secret == null) {
 				secret = access.getPrompt().prompt(key + ".secret", key + ".secret: ", Prompt.Type.MASKED, false);
 			}
-			s3 = new AmazonS3Client(new BasicAWSCredentials(key, secret));
-		} else {
-			s3 = new AmazonS3Client();
+			builder.withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(key, secret)));
 		}
+		s3 = builder.build();
 	}
 
 	@Override

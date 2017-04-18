@@ -31,8 +31,6 @@ import javax.annotation.Nullable;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
-import com.google.common.primitives.Longs;
-
 /**
  * Details for a single file from a {@link Filer}.
  *
@@ -161,21 +159,31 @@ public class Record implements Serializable {
 
 	@Nonnull
 	public static Comparator<Record> sizeAsc() {
-		return (r1, r2) -> Longs.compare(r1.getSize(), r2.getSize());
+		return Comparator.comparingLong(Record::getSize);
 	}
 
 	@Nonnull
 	public static Comparator<Record> sizeDesc() {
-		return (r1, r2) -> -Longs.compare(r1.getSize(), r2.getSize());
+		return Comparator.comparingLong(Record::getSize).reversed();
 	}
 
 	@Nonnull
 	public static Comparator<Record> timeAsc() {
-		return (r1, r2) -> Longs.compare(r1.getTime(), r2.getTime());
+		return Comparator.comparingLong(Record::getTime);
 	}
 
 	@Nonnull
 	public static Comparator<Record> timeDesc() {
-		return (r1, r2) -> -Longs.compare(r1.getTime(), r2.getTime());
+		return Comparator.comparingLong(Record::getTime).reversed();
+	}
+
+	@Nonnull
+	public static Comparator<Record> nameAsc() {
+		return Comparator.comparing(Record::getName);
+	}
+
+	@Nonnull
+	public static Comparator<Record> nameDesc() {
+		return Comparator.comparing(Record::getName).reversed();
 	}
 }

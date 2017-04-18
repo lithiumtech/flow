@@ -26,7 +26,7 @@ import javax.annotation.Nonnull;
  * @author Matt Ayres
  */
 public class Unchecked {
-	public static <T> T get(@Nonnull CheckedSupplier<T, Exception> supplier) {
+	public static <T> T get(@Nonnull CheckedSupplier<T, ? extends Exception> supplier) {
 		checkNotNull(supplier);
 		try {
 			return supplier.get();
@@ -35,7 +35,7 @@ public class Unchecked {
 		}
 	}
 
-	public static void run(@Nonnull CheckedRunnable<Exception> runnable) {
+	public static void run(@Nonnull CheckedRunnable<? extends Exception> runnable) {
 		checkNotNull(runnable);
 		try {
 			runnable.run();
@@ -44,7 +44,7 @@ public class Unchecked {
 		}
 	}
 
-	public static void runAsync(@Nonnull CheckedRunnable<Exception> runnable) {
+	public static void runAsync(@Nonnull CheckedRunnable<? extends Exception> runnable) {
 		checkNotNull(runnable);
 		CompletableFuture.runAsync(() -> run(runnable));
 	}

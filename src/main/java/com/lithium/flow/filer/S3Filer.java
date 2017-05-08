@@ -127,10 +127,12 @@ public class S3Filer implements Filer {
 		}
 
 		for (S3ObjectSummary summary : listing.getObjectSummaries()) {
-			String name = new File(summary.getKey()).getName();
-			long time = summary.getLastModified().getTime();
-			long size = summary.getSize();
-			records.add(new Record(uri, path, name, time, size, false));
+			if (!summary.getKey().endsWith("/")) {
+				String name = new File(summary.getKey()).getName();
+				long time = summary.getLastModified().getTime();
+				long size = summary.getSize();
+				records.add(new Record(uri, path, name, time, size, false));
+			}
 		}
 
 		return records;

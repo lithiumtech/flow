@@ -50,7 +50,9 @@ public class Threader {
 	}
 
 	public Threader(int threads) {
-		this(threads == -1 ? Executors.newCachedThreadPool() : Executors.newFixedThreadPool(threads));
+		this(threads == -1 ? Executors.newCachedThreadPool()
+				: threads == 0 ? MoreExecutors.newDirectExecutorService()
+				: Executors.newFixedThreadPool(threads));
 	}
 
 	public Threader(@Nonnull ExecutorService service) {

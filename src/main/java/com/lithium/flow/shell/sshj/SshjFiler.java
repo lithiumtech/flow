@@ -102,7 +102,7 @@ public class SshjFiler implements Filer {
 	@Nonnull
 	public InputStream readFile(@Nonnull String path) throws IOException {
 		RemoteFile remoteFile = sftp.open(path, READ_MODES);
-		return remoteFile.new RemoteFileInputStream();
+		return remoteFile.new ReadAheadRemoteFileInputStream(16);
 	}
 
 	@Override

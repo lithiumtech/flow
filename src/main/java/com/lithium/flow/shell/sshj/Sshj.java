@@ -18,6 +18,7 @@ package com.lithium.flow.shell.sshj;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.lithium.aws.parameterstore.ParameterStore;
 import com.lithium.flow.access.Login;
 import com.lithium.flow.access.Prompt;
 import com.lithium.flow.access.Prompt.Response;
@@ -27,6 +28,7 @@ import com.lithium.flow.io.Swallower;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 
 import javax.annotation.Nonnull;
 
@@ -36,6 +38,7 @@ import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
 import net.schmizz.sshj.userauth.UserAuthException;
 import net.schmizz.sshj.userauth.password.PasswordFinder;
 import net.schmizz.sshj.userauth.password.Resource;
+import sun.java2d.pipe.RegionSpanIterator;
 
 /**
  * @author Matt Ayres
@@ -44,9 +47,10 @@ public class Sshj extends SSHClient {
 	private final Prompt prompt;
 	private final boolean pty;
 	private final int retries;
+	private final Config config;
 
 	public Sshj(@Nonnull Config config, @Nonnull Prompt prompt) throws IOException {
-		checkNotNull(config);
+		this.config = checkNotNull(config);
 		this.prompt = checkNotNull(prompt);
 
 		getConnection().setMaxPacketSize(config.getInt("shell.maxPacketSize", getConnection().getMaxPacketSize()));
@@ -85,57 +89,97 @@ public class Sshj extends SSHClient {
 
 	public void connect(@Nonnull Login login) throws IOException {
 		log.debug("connect: {}", login);
+
+		boolean useAWS = config.getBoolean("aws.paramstore", false);
+		String sshKey = null;
+		String sshPassword = null;
+
 		connect(login.getHost(), login.getPortOrDefault(22));
 
+		if (useAWS) {
+			String awsRegion = config.getString("aws.region", "us-west-2");
+			String ssmParameterPath = config.getString("aws.parameter.path");
+			String configProfile = config.getString("aws.profile", "lia-dev");
+			ParameterStore parameterStore = new ParameterStore(ssmParameterPath, awsRegion, null, configProfile);
+			Map<String, Object> paramMap = parameterStore.getParamByPath();
+			sshKey = (String) paramMap.get("sshKey");
+			sshPassword = (String) paramMap.get("sshPassword");
+		}
 		UserAuthException exception = null;
 		String keyPath = login.getKeyPath();
 
 		for (int i = 0; i < retries + 1; i++) {
-			if (keyPath != null) {
-				if (new File(keyPath).isFile()) {
-					Response pass = prompt(keyPath, "Enter passphrase for {name}: ", Type.MASKED);
+
+			if (!useAWS) {
+				if (keyPath != null) {
+					if (new File(keyPath).isFile()) {
+						Response pass = prompt(keyPath, "Enter passphrase for {name}: ", Type.MASKED);
+						try {
+							authPublickey(login.getUser(), loadKeys(keyPath, pass.value()));
+							pass.accept();
+							return;
+						} catch (UserAuthException e) {
+							exception = e;
+							pass.reject();
+						}
+					} else {
+						Response key = prompt("key[" + keyPath + "]", "Enter private key for {name}: ", Type.BLOCK);
+						Response pass = prompt("pass[" + keyPath + "]", "Enter passphrase for {name}: ", Type.MASKED);
+
+						try {
+							authPublickey(login.getUser(), loadKeys(key.value(), null, new PasswordFinder() {
+								@Override
+								public char[] reqPassword(Resource<?> resource) {
+									return pass.value().toCharArray();
+								}
+
+								@Override
+								public boolean shouldRetry(Resource<?> resource) {
+									return false;
+								}
+							}));
+							key.accept();
+							pass.accept();
+							return;
+						} catch (UserAuthException e) {
+							exception = e;
+						}
+					}
+				} else {
+					Response pass = prompt(login.getDisplayString(), "Enter password for {name}: ", Type.MASKED);
 					try {
-						authPublickey(login.getUser(), loadKeys(keyPath, pass.value()));
+						authPassword(login.getUser(), pass.value());
 						pass.accept();
 						return;
 					} catch (UserAuthException e) {
 						exception = e;
 						pass.reject();
 					}
-				} else {
-					Response key = prompt("key[" + keyPath + "]", "Enter private key for {name}: ", Type.BLOCK);
-					Response pass = prompt("pass[" + keyPath + "]", "Enter passphrase for {name}: ", Type.MASKED);
-
-					try {
-						authPublickey(login.getUser(), loadKeys(key.value(), null, new PasswordFinder() {
-							@Override
-							public char[] reqPassword(Resource<?> resource) {
-								return pass.value().toCharArray();
-							}
-
-							@Override
-							public boolean shouldRetry(Resource<?> resource) {
-								return false;
-							}
-						}));
-						key.accept();
-						pass.accept();
-						return;
-					} catch (UserAuthException e) {
-						exception = e;
-					}
 				}
 			} else {
-				Response pass = prompt(login.getDisplayString(), "Enter password for {name}: ", Type.MASKED);
+				Response key = Response.build(sshKey);
+				Response pass = Response.build(sshPassword);
+
 				try {
-					authPassword(login.getUser(), pass.value());
+					authPublickey(login.getUser(), loadKeys(key.value(), null, new PasswordFinder() {
+						@Override
+						public char[] reqPassword(Resource<?> resource) {
+							return pass.value().toCharArray();
+						}
+
+						@Override
+						public boolean shouldRetry(Resource<?> resource) {
+							return false;
+						}
+					}));
+					key.accept();
 					pass.accept();
 					return;
 				} catch (UserAuthException e) {
 					exception = e;
-					pass.reject();
 				}
 			}
+
 		}
 
 		if (exception != null) {

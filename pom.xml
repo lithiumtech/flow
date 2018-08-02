@@ -276,5 +276,16 @@
 			<version>2.0.0</version>
 			<optional>true</optional>
 		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk</artifactId>
+			<version>1.11.363</version>
+		</dependency>
+		<dependency>
+			<groupId>com.lithium.aws</groupId>
+			<artifactId>aws-common-parameterstore</artifactId>
+			<version>0.0.134-SNAPSHOT</version>
+			<optional>true</optional>
+		</dependency>
 	</dependencies>
 </project>

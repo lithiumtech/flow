@@ -18,6 +18,7 @@ package com.lithium.flow.svn;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.lithium.aws.parameterstore.ParameterStore;
 import com.lithium.flow.access.Access;
 import com.lithium.flow.access.Login;
 import com.lithium.flow.access.Prompt.Response;
@@ -26,6 +27,8 @@ import com.lithium.flow.config.Config;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Map;
 
 import javax.annotation.Nonnull;
 
@@ -63,6 +66,20 @@ public class LoginSvnProvider implements SvnProvider {
 	@Nonnull
 	@SuppressWarnings("deprecation")
 	public SVNRepository getRepository() throws IOException {
+		boolean useAWS = config.getBoolean("aws.paramstore", false);
+		String sshKey = null;
+		String sshPassword = null;
+
+		if (useAWS) {
+			String awsRegion = config.getString("aws.region", "us-west-2");
+			String ssmParameterPath = config.getString("aws.parameter.path");
+			String configProfile = config.getString("aws.profile", "lia-dev");
+			ParameterStore parameterStore = new ParameterStore(ssmParameterPath, awsRegion, null, configProfile);
+			Map<String, Object> paramMap = parameterStore.getParamByPath();
+			sshKey = (String) paramMap.get("sshKey");
+			sshPassword = (String) paramMap.get("sshPassword");
+		}
+
 		SVNException exception = null;
 		Login login = access.getLogin(url.getHost());
 		String keyPath = login.getKeyPath();
@@ -73,27 +90,41 @@ public class LoginSvnProvider implements SvnProvider {
 			Response key = Response.build("");
 			Response pass;
 
-			if (keyPath != null) {
-				if (new File(keyPath).isFile()) {
-					pass = prompt(keyPath, "Enter passphrase for {name}: ", Type.MASKED);
-					authManager = new BasicAuthenticationManager(login.getUser(), new File(keyPath),
-							pass.value(), login.getPortOrDefault(22));
+			if (!useAWS) {
+				if (keyPath != null) {
+					if (new File(keyPath).isFile()) {
+						pass = prompt(keyPath, "Enter passphrase for {name}: ", Type.MASKED);
+						authManager = new BasicAuthenticationManager(login.getUser(), new File(keyPath),
+								pass.value(), login.getPortOrDefault(22));
+					} else {
+						key = prompt("key[" + keyPath + "]", "Enter private key for {name}: ", Type.BLOCK);
+						pass = prompt("pass[" + keyPath + "]", "Enter passphrase for {name}: ", Type.MASKED);
+
+						String user = login.getUser();
+						char[] keyChars = key.value().toCharArray();
+						char[] passChars = pass.value().isEmpty() ? null : pass.value().toCharArray();
+						int port = login.getPortOrDefault(22);
+
+						authManager = BasicAuthenticationManager.newInstance(new SVNAuthentication[]{
+								SVNSSHAuthentication.newInstance(user, keyChars, passChars, port, false, null, false)
+						});
+					}
 				} else {
-					key = prompt("key[" + keyPath + "]", "Enter private key for {name}: ", Type.BLOCK);
-					pass = prompt("pass[" + keyPath + "]", "Enter passphrase for {name}: ", Type.MASKED);
-
-					String user = login.getUser();
-					char[] keyChars = key.value().toCharArray();
-					char[] passChars = pass.value().isEmpty() ? null : pass.value().toCharArray();
-					int port = login.getPortOrDefault(22);
-
-					authManager = BasicAuthenticationManager.newInstance(new SVNAuthentication[] {
-							SVNSSHAuthentication.newInstance(user, keyChars, passChars, port, false, null, false)
-					});
+					pass = prompt(login.getDisplayString(), "Enter password for {name}: ", Type.MASKED);
+					authManager = new BasicAuthenticationManager(login.getUser(), pass.value());
 				}
 			} else {
-				pass = prompt(login.getDisplayString(), "Enter password for {name}: ", Type.MASKED);
-				authManager = new BasicAuthenticationManager(login.getUser(), pass.value());
+				key = Response.build(sshKey);
+				pass = Response.build(sshPassword);
+
+				String user = login.getUser();
+				char[] keyChars = key.value().toCharArray();
+				char[] passChars = pass.value().isEmpty() ? null : pass.value().toCharArray();
+				int port = login.getPortOrDefault(22);
+
+				authManager = BasicAuthenticationManager.newInstance(new SVNAuthentication[]{
+						SVNSSHAuthentication.newInstance(user, keyChars, passChars, port, false, null, false)
+				});
 			}
 
 			try {

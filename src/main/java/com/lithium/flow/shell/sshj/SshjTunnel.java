@@ -32,7 +32,7 @@ import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 
 import net.schmizz.sshj.connection.channel.direct.LocalPortForwarder;
-import net.schmizz.sshj.connection.channel.direct.LocalPortForwarder.Parameters;
+import net.schmizz.sshj.connection.channel.direct.Parameters;
 
 /**
  * @author Matt Ayres

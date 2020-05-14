@@ -42,14 +42,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.apache.http.HttpStatus;
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
+import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
@@ -82,7 +86,7 @@ import com.google.common.util.concurrent.RateLimiter;
  * @author Matt Ayres
  */
 public class S3Filer implements Filer {
-	private final AmazonS3 s3;
+	private final AmazonS3 internalS3;
 	private final URI uri;
 	private final String bucket;
 	private final long partSize;
@@ -103,7 +107,7 @@ public class S3Filer implements Filer {
 
 	public S3Filer(@Nonnull Config config, @Nonnull AmazonS3 s3) {
 		checkNotNull(config);
-		this.s3 = checkNotNull(s3);
+		this.internalS3 = checkNotNull(s3);
 
 		String url = config.getString("url");
 		uri = getBaseURI(url);
@@ -129,7 +133,7 @@ public class S3Filer implements Filer {
 
 	@Override
 	@Nonnull
-	public List<Record> listRecords(@Nonnull String path) {
+	public List<Record> listRecords(@Nonnull String path) throws IOException {
 		String prefix = path.isEmpty() || path.equals("/") ? "" : keyForPath(path) + "/";
 		ListObjectsV2Request request = new ListObjectsV2Request()
 				.withBucketName(bucket).withPrefix(prefix).withDelimiter("/");
@@ -139,7 +143,7 @@ public class S3Filer implements Filer {
 
 		ListObjectsV2Result listing;
 		do {
-			listing = s3().listObjectsV2(request);
+			listing = get(s3 -> s3.listObjectsV2(request));
 
 			for (String dir : listing.getCommonPrefixes()) {
 				if (dir.startsWith(prefix)) {
@@ -167,7 +171,7 @@ public class S3Filer implements Filer {
 
 	@Override
 	@Nonnull
-	public Record getRecord(@Nonnull String path) {
+	public Record getRecord(@Nonnull String path) throws IOException {
 		try {
 			ObjectMetadata metadata = s3().getObjectMetadata(bucket, keyForPath(path));
 			long time = metadata.getLastModified().getTime();
@@ -178,14 +182,16 @@ public class S3Filer implements Filer {
 			if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
 				return Record.noFile(uri, path);
 			}
-			throw e;
+			throw new IOException(e);
+		} catch (SdkClientException e) {
+			throw new IOException(e);
 		}
 	}
 
 	@Override
 	@Nonnull
-	public InputStream readFile(@Nonnull String path) {
-		S3Object object = s3().getObject(bucket, keyForPath(path));
+	public InputStream readFile(@Nonnull String path) throws IOException {
+		S3Object object = get(s3 -> s3.getObject(bucket, keyForPath(path)));
 		S3ObjectInputStream s3In = object.getObjectContent();
 		long length = object.getObjectMetadata().getContentLength();
 		AtomicLong counter = new AtomicLong();
@@ -216,18 +222,18 @@ public class S3Filer implements Filer {
 			private boolean closed;
 
 			@Override
-			public void write(int b) {
+			public void write(int b) throws IOException {
 				baos.write(b);
 				flip(partSize);
 			}
 
 			@Override
-			public void write(@Nonnull byte[] b) {
+			public void write(@Nonnull byte[] b) throws IOException {
 				write(b, 0, b.length);
 			}
 
 			@Override
-			public void write(@Nonnull byte[] b, int off, int len) {
+			public void write(@Nonnull byte[] b, int off, int len) throws IOException {
 				baos.write(b, off, len);
 				flip(partSize);
 			}
@@ -244,15 +250,17 @@ public class S3Filer implements Filer {
 					metadata.setContentLength(baos.size());
 					PutObjectRequest request = new PutObjectRequest(bucket, key, in, metadata)
 							.withStorageClass(storageClass);
-					s3().putObject(request);
+					use(s3 -> s3.putObject(request));
 				} else {
 					flip(1);
 
 					try {
 						List<PartETag> tags = needle.toList();
-						s3().completeMultipartUpload(new CompleteMultipartUploadRequest(bucket, key, uploadId, tags));
+
+						use(s3 -> s3.completeMultipartUpload(
+								new CompleteMultipartUploadRequest(bucket, key, uploadId, tags)));
 					} catch (UncheckedException e) {
-						s3().abortMultipartUpload(new AbortMultipartUploadRequest(bucket, key, uploadId));
+						use(s3 -> s3.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, key, uploadId)));
 						throw e.unwrap(IOException.class);
 					}
 				}
@@ -260,7 +268,7 @@ public class S3Filer implements Filer {
 				closed = true;
 			}
 
-			private void flip(long minSize) {
+			private void flip(long minSize) throws IOException {
 				if (baos.size() < minSize) {
 					return;
 				}
@@ -269,7 +277,7 @@ public class S3Filer implements Filer {
 					needle = threader.needle();
 					InitiateMultipartUploadRequest request = new InitiateMultipartUploadRequest(bucket, key)
 							.withStorageClass(storageClass);
-					uploadId = s3().initiateMultipartUpload(request).getUploadId();
+					uploadId = get(s3 -> s3.initiateMultipartUpload(request).getUploadId());
 				}
 
 				InputStream in = nextInputStream();
@@ -283,7 +291,7 @@ public class S3Filer implements Filer {
 						.withPartSize(baos.size())
 						.withInputStream(in);
 
-				needle.submit(uploadId + "@" + partNum, () -> s3().uploadPart(uploadRequest).getPartETag());
+				needle.submit(uploadId + "@" + partNum, () -> get(s3 -> s3.uploadPart(uploadRequest).getPartETag()));
 
 				baos.reset();
 			}
@@ -308,40 +316,40 @@ public class S3Filer implements Filer {
 	}
 
 	@Override
-	public void setFileTime(@Nonnull String path, long time) {
+	public void setFileTime(@Nonnull String path, long time) throws IOException {
 		String key = keyForPath(path);
-		ObjectMetadata metadata = s3().getObjectMetadata(bucket, key);
+		ObjectMetadata metadata = get(s3 -> s3.getObjectMetadata(bucket, key));
 		metadata.setLastModified(new Date(time));
-		s3().copyObject(new CopyObjectRequest(bucket, key, bucket, key).withNewObjectMetadata(metadata));
+		use(s3 -> s3.copyObject(new CopyObjectRequest(bucket, key, bucket, key).withNewObjectMetadata(metadata)));
 	}
 
 	@Override
-	public void deleteFile(@Nonnull String path) {
-		s3().deleteObject(bucket, keyForPath(path));
+	public void deleteFile(@Nonnull String path) throws IOException {
+		use(s3 -> s3.deleteObject(bucket, keyForPath(path)));
 	}
 
 	@Override
-	public void renameFile(@Nonnull String oldPath, @Nonnull String newPath) {
+	public void renameFile(@Nonnull String oldPath, @Nonnull String newPath) throws IOException {
 		String oldKey = keyForPath(oldPath);
 		String newKey = keyForPath(newPath);
-		s3().copyObject(new CopyObjectRequest(bucket, oldKey, bucket, newKey).withStorageClass(storageClass));
-		s3().deleteObject(bucket, oldKey);
+		use(s3 -> s3.copyObject(new CopyObjectRequest(bucket, oldKey, bucket, newKey).withStorageClass(storageClass)));
+		use(s3 -> s3.deleteObject(bucket, oldKey));
 	}
 
 	@Override
-	public void createDirs(@Nonnull String path) {
+	public void createDirs(@Nonnull String path) throws IOException {
 		if (!bypassCreateDirs) {
 			InputStream in = new ByteArrayInputStream(new byte[0]);
 			ObjectMetadata metadata = new ObjectMetadata();
 			metadata.setContentLength(0);
-			s3().putObject(bucket, keyForPath(path) + "/", in, metadata);
+			use(s3 -> s3.putObject(bucket, keyForPath(path) + "/", in, metadata));
 		}
 	}
 
 	@Override
-	public void close() {
+	public void close() throws IOException {
 		threader.close();
-		s3.shutdown();
+		use(AmazonS3::shutdown);
 	}
 
 	@Nonnull
@@ -352,7 +360,24 @@ public class S3Filer implements Filer {
 	@Nonnull
 	private AmazonS3 s3() {
 		limiter.acquire();
-		return s3;
+		return internalS3;
+	}
+
+	private void use(@Nonnull Consumer<AmazonS3> consumer) throws IOException {
+		try {
+			consumer.accept(s3());
+		} catch (AmazonClientException e) {
+			throw new IOException(e);
+		}
+	}
+
+	@Nonnull
+	private <T> T get(@Nonnull Function<AmazonS3, T> function) throws IOException {
+		try {
+			return function.apply(s3());
+		} catch (AmazonClientException e) {
+			throw new IOException(e);
+		}
 	}
 
 	@Nonnull

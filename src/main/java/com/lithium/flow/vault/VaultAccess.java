@@ -50,6 +50,7 @@ public class VaultAccess implements Access {
 		checkNotNull(spec);
 
 		String host = delegate.getLogin(spec).getHost();
+		int port = Login.from(spec).getPort();
 
 		for (String key : vault.getKeys()) {
 			Login login = delegate.getLogin(key);
@@ -58,6 +59,6 @@ public class VaultAccess implements Access {
 			}
 		}
 
-		return delegate.getLogin(spec).toBuilder().setHost(host).build();
+		return delegate.getLogin(spec).toBuilder().setHost(host).setPort(port).build();
 	}
 }

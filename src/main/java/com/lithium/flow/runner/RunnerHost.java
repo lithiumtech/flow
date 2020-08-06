@@ -204,7 +204,8 @@ public class RunnerHost implements Closeable {
 	}
 
 	private void killPid(@Nonnull Integer pid, boolean force) throws IOException {
-		getShell().exec("kill " + (force ? "-9 " : "") + pid).exit();
+		String command = runnerConfig.getString("kill.command", "kill");
+		getShell().exec(command + (force ? " -9 " : " ") + pid).exit();
 	}
 
 	private void kill() throws IOException {

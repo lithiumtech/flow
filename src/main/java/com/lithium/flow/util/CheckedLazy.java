@@ -45,4 +45,10 @@ public class CheckedLazy<T, E extends Exception> {
 		}
 		return result;
 	}
+
+	public void invalidate() {
+		synchronized (this) {
+			object = null;
+		}
+	}
 }

@@ -43,7 +43,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 public class Threader implements AutoCloseable {
 	private static final Logger log = Logs.getLogger();
 
-	public static final int DEFAULT_THREADS = -1;
+	public static final int DEFAULT_CODE_THREADS = -1;
+	public static final String DEFAULT_THREADS = "100%";
 	public static final int DEFAULT_RETRIES = 0;
 	public static final int DEFAULT_MAX_QUEUED = Integer.MAX_VALUE;
 	public static final int DEFAULT_NEEDLE_PERMITS = Integer.MAX_VALUE;
@@ -57,7 +58,7 @@ public class Threader implements AutoCloseable {
 	private volatile int needlePermits = DEFAULT_NEEDLE_PERMITS;
 
 	public Threader() {
-		this(DEFAULT_THREADS);
+		this(DEFAULT_CODE_THREADS);
 	}
 
 	public Threader(int threads) {
@@ -217,7 +218,7 @@ public class Threader implements AutoCloseable {
 
 	@Nonnull
 	public static Threader forDaemon() {
-		return forDaemon(DEFAULT_THREADS);
+		return forDaemon(DEFAULT_CODE_THREADS);
 	}
 
 	@Nonnull
@@ -240,7 +241,7 @@ public class Threader implements AutoCloseable {
 	}
 
 	public static int getThreads(@Nonnull Config config) {
-		String value = config.getString("threads", String.valueOf(DEFAULT_THREADS));
+		String value = config.getString("threads", DEFAULT_THREADS);
 		try {
 			if (value.endsWith("%")) {
 				int percent = Integer.parseInt(value.substring(0, value.length() - 1));

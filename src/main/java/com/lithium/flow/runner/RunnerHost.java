@@ -196,16 +196,22 @@ public class RunnerHost implements Closeable {
 
 	@Nullable
 	private Integer getPid(@Nonnull String key) throws IOException {
-		String grep = "grep \"D" + key + "=" + runnerConfig.getString("name") + " \"";
-		String command = "ps auxw | " + grep + " | grep -v grep | awk '{ print $2 }'";
+		String name = runnerConfig.getString("name");
+		String command = runnerConfig.getString("pid.command",
+				"ps auxw | grep 'D{key}={name} ' | grep -v grep | awk '{ print $2 }'")
+				.replace("{key}", key)
+				.replace("{name}", name);
+
 		log.debug("running: {}", command);
 		String pid = getShell().exec(command).line();
 		return pid.isEmpty() ? null : Integer.parseInt(pid);
 	}
 
 	private void killPid(@Nonnull Integer pid, boolean force) throws IOException {
-		String command = runnerConfig.getString("kill.command", "kill");
-		getShell().exec(command + (force ? " -9 " : " ") + pid).exit();
+		String command = runnerConfig.getString("kill.command", "kill -{signal} {pid}")
+				.replace("{signal}", force ? "KILL" : "TERM")
+				.replace("{pid}", String.valueOf(pid));
+		getShell().exec(command).exit();
 	}
 
 	private void kill() throws IOException {

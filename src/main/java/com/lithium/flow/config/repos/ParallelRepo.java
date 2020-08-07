@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.lithium.flow.config.Config;
 import com.lithium.flow.config.Repo;
 import com.lithium.flow.util.Measure;
+import com.lithium.flow.util.Needle;
 import com.lithium.flow.util.Progress;
 import com.lithium.flow.util.Threader;
 
@@ -30,50 +31,55 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
 
-import com.google.common.collect.Lists;
-
 /**
  * @author Matt Ayres
  */
 public class ParallelRepo extends DecoratedRepo {
-	private final Config config;
+	private final Threader threader;
+	private final long logTime;
+	private final long avgTime;
 
 	public ParallelRepo(@Nonnull Repo delegate, @Nonnull Config config) {
-		super(delegate);
-		this.config = checkNotNull(config);
+		super(checkNotNull(delegate));
+		checkNotNull(config);
+
+		threader = Threader.build(config);
+
+		boolean progress = config.getBoolean("progress", false);
+		logTime = progress ? config.getTime("progress.logTime", "5s") : 0;
+		avgTime = progress ? config.getTime("progress.avgTime", "15s") : 0;
 	}
 
 	@Override
 	@Nonnull
 	public List<Config> getConfigs() throws IOException {
-		int threads = config.getInt("threads", Runtime.getRuntime().availableProcessors() / 2);
-		int retries = config.getInt("retries", 0);
-
-		List<Config> configs = Lists.newCopyOnWriteArrayList();
-		Threader threader = new Threader(threads).setRetries(retries);
+		Needle<Config> needle = threader.needle();
 		Progress progress = new Progress();
-		Measure names = progress.counter("names").useForEta();
+		Measure names = progress.measure("names").useForEta();
 
-		if (config.getBoolean("progress", false)) {
-			progress.start(config.getTime("progress.logTime", "5s"), config.getTime("progress.avgTime", "15s"));
+		if (logTime > 0) {
+			progress.start(logTime, avgTime);
 		}
+
 		try {
 			getNames().forEach(name -> {
 				names.incTodo();
-				threader.execute(name, () -> {
-					configs.add(getConfig(name));
-					names.incDone();
+
+				needle.submit(name, () -> {
+					try {
+						return getConfig(name);
+					} finally {
+						names.incDone();
+					}
 				});
 			});
 
-			threader.close();
+			return needle.toList();
 		} finally {
-			if (config.getBoolean("progress", false)) {
+			if (logTime > 0) {
 				progress.close();
 			}
 		}
-
-		return configs;
 	}
 
 	@Override

@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -40,6 +41,8 @@ import com.google.common.collect.ImmutableSortedMap;
  * @author Matt Ayres
  */
 public interface Config {
+	Pattern LIST_SPLIT_PATTERN = Pattern.compile(" *([ ,]) *");
+
 	@Nonnull
 	String getName();
 

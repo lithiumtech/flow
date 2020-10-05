@@ -18,16 +18,13 @@ package com.lithium.flow.config.parsers;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.lithium.flow.config.Config;
 import com.lithium.flow.config.ConfigBuilder;
 import com.lithium.flow.config.ConfigParser;
 
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import javax.annotation.Nonnull;
-
-import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
 
 /**
  * @author Matt Ayres
@@ -44,9 +41,10 @@ public class SubtractConfigParser implements ConfigParser {
 			final String value = line.substring(index + 2).trim();
 			String oldValue = builder.getString(key);
 			if (oldValue != null) {
-				Iterable<String> it = StreamSupport.stream(Splitter.on(" ").split(oldValue).spliterator(), false)
-						.filter(input -> !value.equals(input)).collect(Collectors.toList());
-				builder.setString(key, Joiner.on(" ").join(it));
+				String newValue = Config.LIST_SPLIT_PATTERN.splitAsStream(oldValue)
+						.filter(input -> !value.equals(input))
+						.collect(Collectors.joining(" "));
+				builder.setString(key, newValue);
 				return true;
 			}
 		}

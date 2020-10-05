@@ -24,7 +24,6 @@ import com.lithium.flow.util.TimeUtils;
 
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -36,7 +35,7 @@ import com.google.common.collect.Lists;
  * @author Matt Ayres
  */
 public abstract class AbstractConfig implements Config {
-	private static final Splitter DEFAULT_SPLITTER = Splitter.on(Pattern.compile(" *([ ,]) *"));
+	private static final Splitter DEFAULT_SPLITTER = Splitter.on(LIST_SPLIT_PATTERN);
 
 	protected AbstractConfig() {
 	}

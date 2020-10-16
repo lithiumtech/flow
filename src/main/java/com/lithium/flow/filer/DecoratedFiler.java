@@ -122,6 +122,11 @@ public class DecoratedFiler implements Filer {
 	}
 
 	@Override
+	public void deleteDir(@Nonnull String path) throws IOException {
+		delegate.deleteDir(path);
+	}
+
+	@Override
 	public void renameFile(@Nonnull String oldPath, @Nonnull String newPath) throws IOException {
 		delegate.renameFile(oldPath, newPath);
 	}

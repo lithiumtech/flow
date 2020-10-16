@@ -347,6 +347,11 @@ public class S3Filer implements Filer {
 	}
 
 	@Override
+	public void deleteDir(@Nonnull String path) throws IOException {
+		deleteFile(path);
+	}
+
+	@Override
 	public void close() throws IOException {
 		threader.close();
 		use(AmazonS3::shutdown);

@@ -128,6 +128,12 @@ public class RenameFiler implements Filer {
 	}
 
 	@Override
+	public void deleteDir(@Nonnull String path) throws IOException {
+		path = toReplacer.replace(path);
+		delegate.deleteDir(path);
+	}
+
+	@Override
 	public void renameFile(@Nonnull String oldPath, @Nonnull String newPath) throws IOException {
 		oldPath = toReplacer.replace(oldPath);
 		newPath = toReplacer.replace(newPath);

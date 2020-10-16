@@ -78,6 +78,8 @@ public interface Filer extends Closeable {
 
 	void createDirs(@Nonnull String path) throws IOException;
 
+	void deleteDir(@Nonnull String path) throws IOException;
+
 	default void createFolder(@Nonnull String path) throws IOException {
 		createDirs(RecordPath.getFolder(path));
 	}

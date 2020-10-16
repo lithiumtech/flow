@@ -149,6 +149,11 @@ public class SshjFiler implements Filer {
 	}
 
 	@Override
+	public void deleteDir(@Nonnull String path) throws IOException {
+		sftp.rmdir(path);
+	}
+
+	@Override
 	public void close() throws IOException {
 		sftp.close();
 	}

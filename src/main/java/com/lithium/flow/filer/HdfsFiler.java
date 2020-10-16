@@ -188,6 +188,11 @@ public class HdfsFiler implements Filer {
 	}
 
 	@Override
+	public void deleteDir(@Nonnull String path) throws IOException {
+		deleteFile(path);
+	}
+
+	@Override
 	public void renameFile(@Nonnull String oldPath, @Nonnull String newPath) throws IOException {
 		checkNotNull(oldPath);
 		checkNotNull(newPath);

@@ -163,6 +163,11 @@ public class LocalFiler implements Filer {
 	}
 
 	@Override
+	public void deleteDir(@Nonnull String path) throws IOException {
+		deleteFile(path);
+	}
+
+	@Override
 	public void renameFile(@Nonnull String oldPath, @Nonnull String newPath) throws IOException {
 		File oldFile = new File(checkNotNull(oldPath));
 		File newFile = new File(checkNotNull(newPath));

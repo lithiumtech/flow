@@ -144,6 +144,11 @@ public class HarFiler implements Filer {
 	}
 
 	@Override
+	public void deleteDir(@Nonnull String path) throws IOException {
+		deleteFile(path);
+	}
+
+	@Override
 	public void close() throws IOException {
 		hdfsFiler.close();
 	}

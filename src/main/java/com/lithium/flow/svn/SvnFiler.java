@@ -212,6 +212,11 @@ public class SvnFiler implements Filer {
 	}
 
 	@Override
+	public void deleteDir(@Nonnull String path) {
+		throw new UnsupportedOperationException("deleteDir not implemented yet");
+	}
+
+	@Override
 	public void renameFile(@Nonnull String oldPath, @Nonnull String newPath) {
 		throw new UnsupportedOperationException("renameFile not implemented yet");
 	}

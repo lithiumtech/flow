@@ -25,6 +25,7 @@ import com.lithium.flow.access.prompts.MemoryPrompt;
 import com.lithium.flow.access.prompts.NoPrompt;
 import com.lithium.flow.access.prompts.SyncPrompt;
 import com.lithium.flow.config.Config;
+import com.lithium.flow.config.exception.IllegalConfigException;
 import com.lithium.flow.ioc.Locator;
 import com.lithium.flow.shell.ShellAccess;
 import com.lithium.flow.shell.Shells;
@@ -86,7 +87,24 @@ public class Vaults {
 	}
 
 	@Nonnull
-	public static Vault buildVault(@Nonnull Config config)  {
+	public static Vault buildVault(@Nonnull Config config) {
+		checkNotNull(config);
+
+		String vault = config.getString("vault", "file");
+		switch (vault) {
+			case "file":
+				return buildFileVault(config);
+
+			case "ssm":
+				return new AmazonVault(config);
+
+			default:
+				throw new IllegalConfigException("vault", vault, "string", null);
+		}
+	}
+
+	@Nonnull
+	private static Vault buildFileVault(@Nonnull Config config) {
 		checkNotNull(config);
 
 		String path = config.getString("vault.path", System.getProperty("user.home") + "/.vault");

@@ -71,6 +71,7 @@ public class RunnerSync implements Closeable {
 		String check = config.getString("java.check");
 		String md5 = config.getString("java.md5");
 		String install = config.getString("java.install");
+		String link = config.getString("java.link", "");
 
 		needle.execute("java", () -> {
 			String checkMd5 = shell.exec(check).line();
@@ -78,6 +79,11 @@ public class RunnerSync implements Closeable {
 			if (!md5.equals(checkMd5)) {
 				log.debug("java install: " + install);
 				shell.exec(install).exit();
+			}
+
+			if (!link.isEmpty()) {
+				log.debug("java link: " + link);
+				shell.exec(link).exit();
 			}
 		});
 	}

@@ -35,6 +35,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -135,12 +136,21 @@ public class RunnerHost implements Closeable {
 
 	private void run(@Nonnull String prefix, @Nonnull String classpath, @Nullable String env) {
 		try {
+			String destDir = runnerConfig.getString("dest.dir");
+			String classpathPath = destDir + "/classpath";
+			Shell shell = getShell();
+			Filer filer = shell.getFiler();
+
+			try (PrintStream ps = new PrintStream(filer.writeFile(classpathPath))) {
+				ps.println(classpath);
+			}
+
 			List<String> commands = new ArrayList<>();
-			commands.add("export CLASSPATH=" + classpath);
+			commands.add("export CLASSPATH=$(cat " + classpathPath + ")");
 			if (env != null) {
 				commands.add(env);
 			}
-			commands.add("cd " + runnerConfig.getString("dest.dir"));
+			commands.add("cd " + destDir);
 
 			String command = runnerConfig.getString("java.command");
 			if (runnerConfig.getTime("relay", "0") != 0) {
@@ -150,6 +160,10 @@ public class RunnerHost implements Closeable {
 				commands.add(command);
 			}
 
+			if (runnerConfig.getBoolean("run.scripts", false)) {
+				writeScripts(commands);
+			}
+
 			String readyString = runnerConfig.getString("run.readyString", null);
 			AtomicBoolean ready = new AtomicBoolean();
 
@@ -157,7 +171,7 @@ public class RunnerHost implements Closeable {
 			AtomicInteger logCount = new AtomicInteger();
 
 			commands.forEach(run -> log.debug("running: {}", run));
-			runExec = getShell().exec(commands);
+			runExec = shell.exec(commands);
 			runNeedle.execute("out@" + host, () -> runExec.out().forEach(line -> {
 				if (logCount.incrementAndGet() > logSkip) {
 					System.out.println(prefix + line);
@@ -174,6 +188,42 @@ public class RunnerHost implements Closeable {
 			}
 		} catch (IOException e) {
 			log.warn("exec failed", e);
+		}
+	}
+
+	private void writeScripts(@Nonnull List<String> commands) throws IOException {
+		String name = runnerConfig.getString("name");
+		String destDir = runnerConfig.getString("dest.dir");
+		String startPath = destDir + "/start.sh";
+		String stopPath = destDir + "/stop.sh";
+
+		try (Shell shell = getShell()) {
+			Filer filer = shell.getFiler();
+
+			String logOut = runnerConfig.getString("log.out");
+			List<String> startCommands = new ArrayList<>(commands);
+			String lastCommand = startCommands.remove(startCommands.size() - 1);
+
+			try (PrintStream ps = new PrintStream(filer.writeFile(startPath))) {
+				ps.println("#!/bin/bash");
+				startCommands.forEach(ps::println);
+				ps.println("echo >> " + logOut);
+				ps.println(lastCommand + " 1>/dev/null 2>&1 &");
+				ps.println("tail -f " + logOut);
+			}
+
+			try (PrintStream ps = new PrintStream(filer.writeFile(stopPath))) {
+				ps.println("#!/bin/bash");
+				ps.println("echo >> " + logOut);
+				if (runnerConfig.getTime("relay", "0") != 0) {
+					ps.println("kill $(ps auxw | grep 'Drelay=" + name + " ' | grep -v grep | awk '{ print $2 }')");
+				}
+				ps.println("kill $(ps auxw | grep 'Dname=" + name + " ' | grep -v grep | awk '{ print $2 }')");
+				ps.println("tail -f " + logOut);
+			}
+
+			shell.exec("chmod +x " + startPath).exit();
+			shell.exec("chmod +x " + stopPath).exit();
 		}
 	}
 

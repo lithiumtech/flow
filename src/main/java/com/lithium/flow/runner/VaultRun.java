@@ -26,6 +26,7 @@ import com.lithium.flow.filer.Filer;
 import com.lithium.flow.filer.RecordPath;
 import com.lithium.flow.store.MemoryStore;
 import com.lithium.flow.util.Logs;
+import com.lithium.flow.util.Passwords;
 import com.lithium.flow.vault.SecureVault;
 import com.lithium.flow.vault.Vault;
 
@@ -33,7 +34,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -50,7 +50,7 @@ public class VaultRun {
 
 	private final Config runnerConfig;
 	private final Map<String, String> map = new LinkedHashMap<>();
-	private final String password = UUID.randomUUID().toString();
+	private final String password = Passwords.create(34);
 
 	private String env;
 

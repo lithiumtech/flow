@@ -24,6 +24,7 @@ import com.lithium.flow.db.Schema;
 import com.lithium.flow.filer.Filer;
 import com.lithium.flow.filer.Filers;
 import com.lithium.flow.table.CsvOutputTable;
+import com.lithium.flow.table.NoTable;
 import com.lithium.flow.table.SqlTable;
 import com.lithium.flow.table.Table;
 
@@ -58,6 +59,9 @@ public class TableUtils {
 			case "sql":
 				Schema schema = Databases.buildSchema(config);
 				return new SqlTable(schema, config.getString("sql.table"), config.getList("sql.columns"));
+
+			case "none":
+				return new NoTable();
 
 			default:
 				throw new IllegalConfigException("table", table, "string", null);

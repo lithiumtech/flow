@@ -12,4 +12,12 @@
 		<ignoreVersion type="regex">(?i).*-m[0-9]*</ignoreVersion>
 		<ignoreVersion type="regex">(?i).*.pr[0-9]*</ignoreVersion>
 	</ignoreVersions>
+
+	<rules>
+		<rule groupId="org.eclipse.jetty">
+			<ignoreVersions>
+				<ignoreVersion type="regex">1.*</ignoreVersion>
+			</ignoreVersions>
+		</rule>
+	</rules>
 </ruleset>

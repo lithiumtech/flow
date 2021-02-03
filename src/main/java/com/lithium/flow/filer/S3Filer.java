@@ -58,7 +58,9 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
@@ -414,32 +416,46 @@ public class S3Filer implements Filer {
 		builder.withChunkedEncodingDisabled(getBooleanOrNull(config, "s3.chunkedEncodingDisabled"));
 		builder.withPathStyleAccessEnabled(getBooleanOrNull(config, "s3.pathStyleAccessEnabled"));
 
-		String key = config.getString("aws.key", null);
-		if (key != null) {
-			AmazonS3Exception exception = null;
-			int tries = config.getInt("s3.promptTries", 3);
+		switch (config.getString("aws.credentials", "basic")) {
+			case "basic":
+				String key = config.getString("aws.key");
+				AmazonS3Exception exception = null;
+				int tries = config.getInt("s3.promptTries", 3);
 
-			for (int i = 0; i < tries; i++) {
-				Response response = access.prompt(key + ".secret", key + ".secret: ", Type.MASKED);
-				try {
-					String secret = response.value();
-					builder.withCredentials(buildCredentials(config, new BasicAWSCredentials(key, secret)));
+				for (int i = 0; i < tries; i++) {
+					Response response = access.prompt(key + ".secret", key + ".secret: ", Type.MASKED);
+					try {
+						String secret = response.value();
+						builder.withCredentials(buildCredentials(config, new BasicAWSCredentials(key, secret)));
 
-					AmazonS3 s3 = builder.build();
-					if (!s3.doesBucketExistV2(bucket)) {
-						throw new RuntimeException("bucket does not exist: " + bucket);
+						AmazonS3 s3 = builder.build();
+						if (!s3.doesBucketExistV2(bucket)) {
+							throw new RuntimeException("bucket does not exist: " + bucket);
+						}
+						response.accept();
+						return s3;
+					} catch (AmazonS3Exception e) {
+						exception = e;
+						response.reject();
 					}
-					response.accept();
-					return s3;
-				} catch (AmazonS3Exception e) {
-					exception = e;
-					response.reject();
 				}
-			}
 
-			if (exception != null) {
-				throw exception;
-			}
+				if (exception != null) {
+					throw exception;
+				}
+				break;
+
+			case "instance":
+				builder.withCredentials(InstanceProfileCredentialsProvider.getInstance());
+				break;
+
+			case "profile":
+				String profile = config.getString("aws.profile");
+				builder.withCredentials(new ProfileCredentialsProvider(profile));
+				break;
+
+			case "none":
+				break;
 		}
 
 		return builder.build();

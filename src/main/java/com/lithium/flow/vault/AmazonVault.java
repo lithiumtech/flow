@@ -48,8 +48,14 @@ public class AmazonVault implements Vault {
 	public AmazonVault(@Nonnull Config config) {
 		checkNotNull(config);
 
-		AWSCredentialsProvider credentials = buildCredentials(config);
-		ssm = AWSSimpleSystemsManagementClientBuilder.standard().withCredentials(credentials).build();
+		Config ssmConfig = config.prefix("ssm");
+		AWSCredentialsProvider credentials = buildCredentials(ssmConfig);
+		AWSSimpleSystemsManagementClientBuilder builder = AWSSimpleSystemsManagementClientBuilder.standard();
+		builder.withCredentials(credentials);
+		if (ssmConfig.containsKey("aws.region")) {
+			builder.withRegion(ssmConfig.getString("aws.region"));
+		}
+		ssm = builder.build();
 		prefix = config.getString("ssm.prefix", "");
 
 		for (String alias : config.getList("ssm.aliases", Configs.emptyList())) {

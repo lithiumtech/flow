@@ -17,19 +17,24 @@
 package com.lithium.flow.util;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.stream.Collectors.toList;
 
 import com.lithium.flow.config.Config;
 import com.lithium.flow.table.ElasticTable;
 import com.lithium.flow.table.Table;
 
 import java.net.InetAddress;
+import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.Nonnull;
 
 import org.elasticsearch.client.Client;
+import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
+import org.elasticsearch.plugins.Plugin;
+import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.slf4j.Logger;
 
 import com.google.common.base.Splitter;
@@ -52,9 +57,12 @@ public class ElasticUtils {
 				.filter(key -> key.startsWith("elastic:"))
 				.forEach(key -> settings.put(key.replaceFirst("^elastic:", ""), config.getString(key)));
 
+		List<Class<? extends Plugin>> plugins = config.getList("elastic.plugins", Collections.emptyList()).stream()
+				.map(ElasticUtils::pluginClass)
+				.collect(toList());
+
 		@SuppressWarnings("deprecation")
-		org.elasticsearch.client.transport.TransportClient client =
-				new org.elasticsearch.transport.client.PreBuiltTransportClient(settings.build());
+		TransportClient client = new PreBuiltTransportClient(settings.build(), plugins);
 
 		List<String> hosts = config.getList("elastic.hosts", Splitter.on(' '));
 		int port = config.getInt("elastic.port", 9300);
@@ -82,5 +90,15 @@ public class ElasticUtils {
 
 		String index = config.getString("elastic.index");
 		return new ElasticTable(client, index);
+	}
+
+	@Nonnull
+	@SuppressWarnings("unchecked")
+	private static Class<Plugin> pluginClass(@Nonnull String className) {
+		try {
+			return (Class<Plugin>) Class.forName(className);
+		} catch (ClassNotFoundException e) {
+			throw new RuntimeException(e);
+		}
 	}
 }

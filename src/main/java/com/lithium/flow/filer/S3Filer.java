@@ -25,6 +25,7 @@ import com.lithium.flow.config.Config;
 import com.lithium.flow.config.Configs;
 import com.lithium.flow.io.DataIo;
 import com.lithium.flow.streams.CounterInputStream;
+import com.lithium.flow.util.Lazy;
 import com.lithium.flow.util.LimiterInputStream;
 import com.lithium.flow.util.Needle;
 import com.lithium.flow.util.Threader;
@@ -97,7 +98,7 @@ public class S3Filer implements Filer {
 	private final StorageClass storageClass;
 	private final RateLimiter limiter;
 	private final RateLimiter bitLimiter;
-	private final Threader threader;
+	private final Lazy<Threader> threader;
 
 	public S3Filer(@Nonnull Config config, @Nonnull Access access) {
 		this(config, buildS3(config, access));
@@ -123,7 +124,7 @@ public class S3Filer implements Filer {
 
 		int threads = config.getInt("s3.threads", 8);
 		int maxQueued = config.getInt("s3.maxQueued", threads);
-		threader = new Threader(threads).setMaxQueued(maxQueued);
+		threader = new Lazy<>(() -> new Threader(threads).setMaxQueued(maxQueued));
 	}
 
 
@@ -276,7 +277,7 @@ public class S3Filer implements Filer {
 				}
 
 				if (needle == null) {
-					needle = threader.needle();
+					needle = threader.get().needle();
 					InitiateMultipartUploadRequest request = new InitiateMultipartUploadRequest(bucket, key)
 							.withStorageClass(storageClass);
 					uploadId = get(s3 -> s3.initiateMultipartUpload(request).getUploadId());
@@ -355,7 +356,7 @@ public class S3Filer implements Filer {
 
 	@Override
 	public void close() throws IOException {
-		threader.close();
+		threader.getOptional().ifPresent(Threader::close);
 		use(AmazonS3::shutdown);
 	}
 

@@ -18,6 +18,8 @@ package com.lithium.flow.util;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.Optional;
+
 import javax.annotation.Nonnull;
 
 /**
@@ -44,6 +46,11 @@ public class CheckedLazy<T, E extends Exception> {
 			}
 		}
 		return result;
+	}
+
+	@Nonnull
+	public Optional<T> getOptional() {
+		return Optional.ofNullable(object);
 	}
 
 	public void invalidate() {

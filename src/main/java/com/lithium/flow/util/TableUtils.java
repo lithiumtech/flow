@@ -56,6 +56,9 @@ public class TableUtils {
 			case "elastic":
 				return ElasticUtils.buildTable(config);
 
+			case "elastic-rest":
+				return ElasticRestUtils.buildTable(config);
+
 			case "sql":
 				Schema schema = Databases.buildSchema(config);
 				return new SqlTable(schema, config.getString("sql.table"), config.getList("sql.columns"));

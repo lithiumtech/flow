@@ -134,6 +134,12 @@ public interface ConfigBuilder {
 	@Nonnull
 	ConfigBuilder allowRequiredKeys(boolean allowRequiredKeys);
 
+	boolean allowFileNotFound();
+
+	boolean allowUndefined();
+
+	boolean allowRequiredKeys();
+
 	@Nonnull
 	ConfigBuilder setName(@Nonnull String name);
 }

@@ -167,6 +167,21 @@ public class BaseConfigBuilder implements ConfigBuilder {
 	}
 
 	@Override
+	public final boolean allowFileNotFound() {
+		return allowFileNotFound;
+	}
+
+	@Override
+	public final boolean allowUndefined() {
+		return allowUndefined;
+	}
+
+	@Override
+	public final boolean allowRequiredKeys() {
+		return allowRequiredKeys;
+	}
+
+	@Override
 	@Nonnull
 	public final BaseConfigBuilder setName(@Nonnull String name) {
 		this.name = checkNotNull(name);

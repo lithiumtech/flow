@@ -43,6 +43,7 @@ public class IncludeConfigParserTest {
 
 	private void testInclude(String line, String include) throws IOException {
 		ConfigBuilder builder = createMock(ConfigBuilder.class);
+		expect(builder.allowFileNotFound()).andReturn(false);
 		expect(builder.include(include)).andReturn(builder);
 		replay(builder);
 		assertTrue(new IncludeConfigParser().parseLine(line, builder));
@@ -57,6 +58,7 @@ public class IncludeConfigParserTest {
 
 	private void testNoInclude(String line) throws IOException {
 		ConfigBuilder builder = createMock(ConfigBuilder.class);
+		expect(builder.allowFileNotFound()).andReturn(false);
 		replay(builder);
 		assertFalse(new IncludeConfigParser().parseLine(line, builder));
 		verify(builder);
@@ -65,6 +67,7 @@ public class IncludeConfigParserTest {
 	@Test
 	public void testPrefixInclude() throws IOException {
 		ConfigBuilder builder = createMock(ConfigBuilder.class);
+		expect(builder.allowFileNotFound()).andReturn(false);
 		expect(builder.pushPrefix("arf")).andReturn(builder);
 		expect(builder.include("foo/bar.config")).andReturn(builder);
 		expect(builder.popPrefix()).andReturn(builder);

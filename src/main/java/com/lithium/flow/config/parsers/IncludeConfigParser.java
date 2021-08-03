@@ -31,26 +31,39 @@ import javax.annotation.Nonnull;
  * @author Matt Ayres
  */
 public class IncludeConfigParser implements ConfigParser {
-	private static final Pattern prefixPattern = Pattern.compile("!include\\((.*)\\)[ \t]+(.+?)[ \t]*");
-	private static final Pattern normalPattern = Pattern.compile("!include[ \t]+(.+?)[ \t]*");
+	private static final Pattern prefixPattern = Pattern.compile("[!?]include\\((.*)\\)[ \t]+(.+?)[ \t]*");
+	private static final Pattern normalPattern = Pattern.compile("[!?]include[ \t]+(.+?)[ \t]*");
 
 	@Override
 	public boolean parseLine(@Nonnull String line, @Nonnull ConfigBuilder builder) throws IOException {
 		checkNotNull(line);
 		checkNotNull(builder);
 
-		Matcher prefixMatcher = prefixPattern.matcher(line);
-		if (prefixMatcher.matches()) {
-			builder.pushPrefix(prefixMatcher.group(1));
-			builder.include(prefixMatcher.group(2));
-			builder.popPrefix();
-			return true;
-		}
+		boolean skipFileNotFound = line.startsWith("?");
+		boolean lastAllowFileNotFound = builder.allowFileNotFound();
 
-		Matcher normalMatcher = normalPattern.matcher(line);
-		if (normalMatcher.matches()) {
-			builder.include(normalMatcher.group(1));
-			return true;
+		try {
+			if (skipFileNotFound) {
+				builder.allowFileNotFound(true);
+			}
+
+			Matcher prefixMatcher = prefixPattern.matcher(line);
+			if (prefixMatcher.matches()) {
+				builder.pushPrefix(prefixMatcher.group(1));
+				builder.include(prefixMatcher.group(2));
+				builder.popPrefix();
+				return true;
+			}
+
+			Matcher normalMatcher = normalPattern.matcher(line);
+			if (normalMatcher.matches()) {
+				builder.include(normalMatcher.group(1));
+				return true;
+			}
+		} finally {
+			if (skipFileNotFound) {
+				builder.allowFileNotFound(lastAllowFileNotFound);
+			}
 		}
 
 		return false;

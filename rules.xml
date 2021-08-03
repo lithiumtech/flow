@@ -7,10 +7,19 @@
 	<ignoreVersions>
 		<ignoreVersion type="regex">(?i).*alpha.*</ignoreVersion>
 		<ignoreVersion type="regex">(?i).*beta.*</ignoreVersion>
+		<ignoreVersion type="regex">(?i).*ce</ignoreVersion>
+		<ignoreVersion type="regex">(?i).*ccs</ignoreVersion>
 		<ignoreVersion type="regex">(?i).*ea</ignoreVersion>
-		<ignoreVersion type="regex">(?i).*rc[-\d].*</ignoreVersion>
+		<ignoreVersion type="regex">(?i).*rc[\d\-].*</ignoreVersion>
+		<ignoreVersion type="regex">(?i).*-b[0-9\.]*</ignoreVersion>
 		<ignoreVersion type="regex">(?i).*-m[0-9]*</ignoreVersion>
+		<ignoreVersion type="regex">(?i).*-cp[0-9]*</ignoreVersion>
 		<ignoreVersion type="regex">(?i).*.pr[0-9]*</ignoreVersion>
+		<ignoreVersion type="regex">.*-snapshot[0-9]*</ignoreVersion>
+		<ignoreVersion type="regex">.*-atlassian.*</ignoreVersion>
+		<ignoreVersion type="regex">.*-cloudera.*</ignoreVersion>
+		<ignoreVersion type="regex">.*-kohsuke.*</ignoreVersion>
+		<ignoreVersion type="regex">^20.*[0-9]{6}</ignoreVersion>
 	</ignoreVersions>
 
 	<rules>

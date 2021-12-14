@@ -28,6 +28,9 @@ import com.lithium.flow.util.Unchecked;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.PublicKey;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -35,6 +38,7 @@ import javax.annotation.Nonnull;
 
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.common.SecurityUtils;
+import net.schmizz.sshj.transport.verification.HostKeyVerifier;
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
 import net.schmizz.sshj.userauth.UserAuthException;
 import net.schmizz.sshj.userauth.password.PasswordFinder;
@@ -77,11 +81,19 @@ public class Sshj extends SSHClient {
 				}
 			}
 
-			addHostKeyVerifier((host, port, key) -> {
-				String fingerprint = SecurityUtils.getFingerprint(key);
-				String name = "fingerprint[" + fingerprint + "]@" + host;
-				String message = "Enter yes/no to verify fingerprint " + fingerprint + " for " + host + ": ";
-				return prompt.prompt(name, message, Type.PLAIN).accept().equals("yes");
+			addHostKeyVerifier(new HostKeyVerifier() {
+				@Override
+				public boolean verify(@Nonnull String host, int port, @Nonnull PublicKey key) {
+					String fingerprint = SecurityUtils.getFingerprint(key);
+					String name = "fingerprint[" + fingerprint + "]@" + host;
+					String message = "Enter yes/no to verify fingerprint " + fingerprint + " for " + host + ": ";
+					return prompt.prompt(name, message, Type.PLAIN).accept().equals("yes");
+				}
+
+				@Override
+				public List<String> findExistingAlgorithms(@Nonnull String host, int port) {
+					return Collections.emptyList();
+				}
 			});
 		}
 

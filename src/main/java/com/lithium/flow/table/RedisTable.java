@@ -34,7 +34,7 @@ import javax.annotation.Nonnull;
 import com.google.common.collect.Queues;
 
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.ScanResult;
+import redis.clients.jedis.resps.ScanResult;
 
 /**
  * @author Matt Ayres

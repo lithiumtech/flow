@@ -29,6 +29,7 @@ import javax.annotation.Nonnull;
 
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
+import redis.clients.jedis.Connection;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCluster;
@@ -77,7 +78,7 @@ public class JedisUtils {
 		List<String> hosts = config.getList("redis.hosts", Collections.singletonList("localhost"));
 		Set<HostAndPort> nodes = hosts.stream().map(JedisUtils::buildHostAndPort).collect(toSet());
 		int timeout = (int) config.getTime("redis.timeout", String.valueOf(Protocol.DEFAULT_TIMEOUT));
-		GenericObjectPoolConfig<Jedis> poolConfig = ConfigObjectPool.buildConfig(config.prefix("redis"));
+		GenericObjectPoolConfig<Connection> poolConfig = ConfigObjectPool.buildConfig(config.prefix("redis"));
 
 		return new JedisCluster(nodes, timeout, poolConfig);
 	}

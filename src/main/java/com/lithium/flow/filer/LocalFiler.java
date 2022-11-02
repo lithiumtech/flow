@@ -89,7 +89,7 @@ public class LocalFiler implements Filer {
 		checkNotNull(path);
 		File file = new File(path);
 		if (file.exists()) {
-			return new FileInputStream(new File(path));
+			return new FileInputStream(path);
 		} else {
 			throw new FileNotFoundException(path);
 		}

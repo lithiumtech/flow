@@ -58,13 +58,13 @@ public final class CompressStreamer implements Streamer {
 
 	@Override
 	@Nonnull
-	public final OutputStream filterOut(@Nonnull OutputStream out, @Nullable String name) throws IOException {
+	public OutputStream filterOut(@Nonnull OutputStream out, @Nullable String name) throws IOException {
 		return outCoder.wrapOut(out, compressOption);
 	}
 
 	@Override
 	@Nonnull
-	public final InputStream filterIn(@Nonnull InputStream in, @Nullable String name) throws IOException {
+	public InputStream filterIn(@Nonnull InputStream in, @Nullable String name) throws IOException {
 		return inCoder.wrapIn(in);
 	}
 }

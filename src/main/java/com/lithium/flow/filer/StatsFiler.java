@@ -185,7 +185,7 @@ public class StatsFiler extends DecoratedFiler {
 		long time = System.currentTimeMillis() - startTime;
 		for (Stat stat : stats) {
 			long avg = stat.getCount() > 0 ? stat.getTime() / stat.getCount() : 0;
-			long perSec = stat.getTime() > 0 ? stat.getCount() * 1000 / stat.getTime() : 0;
+			long perSec = stat.getTime() > 0 ? stat.getCount() * 1000L / stat.getTime() : 0;
 			log.info("{}: {} times in {}ms ({}ms avg, {}/sec)",
 					stat.getName(), stat.getCount(), stat.getTime(), avg, perSec);
 		}

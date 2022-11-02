@@ -133,7 +133,7 @@ public class RunnerContext {
 					hasher.putLong(r.getTime());
 				});
 
-				String name = "runner_" + hasher.hash().toString() + ".jar";
+				String name = "runner_" + hasher.hash() + ".jar";
 				modules.add(name);
 				bytes.put(name, new Lazy<>(() -> buildJar(classPath, records)));
 			}

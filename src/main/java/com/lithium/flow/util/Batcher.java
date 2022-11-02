@@ -133,6 +133,7 @@ public class Batcher<T> {
 		}
 
 		@Override
+		@Nonnull
 		public Iterator<T> iterator() {
 			return new Iterator<T>() {
 				private final Iterator<T> internal = itemQueue.iterator();

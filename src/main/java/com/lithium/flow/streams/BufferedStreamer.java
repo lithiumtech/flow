@@ -42,13 +42,13 @@ public final class BufferedStreamer implements Streamer {
 
 	@Override
 	@Nonnull
-	public final OutputStream filterOut(@Nonnull OutputStream out, String name) {
+	public OutputStream filterOut(@Nonnull OutputStream out, String name) {
 		return new BufferedOutputStream(out, size);
 	}
 
 	@Override
 	@Nonnull
-	public final InputStream filterIn(@Nonnull InputStream in, String name) {
+	public InputStream filterIn(@Nonnull InputStream in, String name) {
 		return new BufferedInputStream(in, size);
 	}
 }

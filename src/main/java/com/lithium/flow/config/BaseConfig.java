@@ -53,7 +53,7 @@ public final class BaseConfig extends AbstractConfig {
 
 	@Override
 	@Nonnull
-	public final String getName() {
+	public String getName() {
 		return name;
 	}
 
@@ -63,7 +63,7 @@ public final class BaseConfig extends AbstractConfig {
 	}
 
 	@Override
-	public final boolean containsKey(@Nonnull String key) {
+	public boolean containsKey(@Nonnull String key) {
 		checkNotNull(key);
 		try {
 			return getValue(key, null, true, null, null) != null;
@@ -74,7 +74,7 @@ public final class BaseConfig extends AbstractConfig {
 
 	@Override
 	@Nullable
-	public final String getRaw(@Nonnull String key) {
+	public String getRaw(@Nonnull String key) {
 		checkNotNull(key);
 		String value = store.getValue(key);
 		return value != null ? value : defaults != null ? defaults.getRaw(key) : null;
@@ -93,7 +93,7 @@ public final class BaseConfig extends AbstractConfig {
 
 	@Override
 	@Nullable
-	public final String getValue(@Nonnull String key, @Nullable String defaultValue, boolean defaultSpecified,
+	public String getValue(@Nonnull String key, @Nullable String defaultValue, boolean defaultSpecified,
 			@Nullable Config outerConfig, @Nullable Set<String> usedKeys) {
 		checkNotNull(key);
 

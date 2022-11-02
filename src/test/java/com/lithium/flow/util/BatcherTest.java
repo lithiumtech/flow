@@ -47,7 +47,7 @@ public class BatcherTest {
 		}
 
 
-		batcher.finish();
-		batcher.finish();
+		batcher.close();
+		batcher.close();
 	}
 }

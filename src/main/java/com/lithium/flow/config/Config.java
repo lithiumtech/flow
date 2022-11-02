@@ -136,7 +136,7 @@ public interface Config {
 	@Nonnull
 	default Properties asProperties() {
 		Properties properties = new Properties();
-		asMap().forEach(properties::put);
+		properties.putAll(asMap());
 		return properties;
 	}
 

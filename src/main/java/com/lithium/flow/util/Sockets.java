@@ -52,6 +52,10 @@ public class Sockets {
 	}
 
 	public static void waitForConnect(@Nonnull String host, int port, long timeout) throws IOException {
+		waitForConnect(host, port, timeout, 1000);
+	}
+
+	public static void waitForConnect(@Nonnull String host, int port, long timeout, long delay) throws IOException {
 		long timeoutTime = System.currentTimeMillis() + timeout;
 		InetSocketAddress address = new InetSocketAddress(host, port);
 
@@ -65,7 +69,7 @@ public class Sockets {
 				if (System.currentTimeMillis() > timeoutTime) {
 					throw e;
 				}
-				Sleep.softly(1000);
+				Sleep.softly(delay);
 			}
 		}
 	}

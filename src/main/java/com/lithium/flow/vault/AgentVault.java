@@ -18,18 +18,22 @@ package com.lithium.flow.vault;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.lithium.flow.config.Config;
 import com.lithium.flow.config.Configs;
 import com.lithium.flow.store.MemoryStore;
 import com.lithium.flow.store.Store;
 import com.lithium.flow.util.Logs;
 import com.lithium.flow.util.Passwords;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -49,10 +53,12 @@ public class AgentVault implements Vault {
 	private final ObjectMapper mapper = new ObjectMapper();
 	private final Vault delegate;
 	private final Store store;
+	private final Config config;
 
-	public AgentVault(@Nonnull Vault delegate, @Nonnull Store store) {
+	public AgentVault(@Nonnull Vault delegate, @Nonnull Store store, @Nonnull Config config) {
 		this.delegate = checkNotNull(delegate);
 		this.store = checkNotNull(store);
+		this.config = checkNotNull(config);
 	}
 
 	@Override
@@ -156,9 +162,18 @@ public class AgentVault implements Vault {
 			agentVault.setup(agentPassword);
 			agentVault.putValue("password", password);
 
+			String configPath = config.getString("vault.config", System.getProperty("user.home") + "/.vault.config");
+
+			List<String> commands = new ArrayList<>();
+			commands.add(System.getProperty("java.home") + "/bin/java");
+			commands.add("-Dagent.port=" + port);
+			if (configPath != null && new File(configPath).exists()) {
+				commands.add("-Dconfig=" + configPath);
+			}
+			commands.add(AgentServer.class.getName());
+
 			ProcessBuilder builder = new ProcessBuilder();
-			builder.command(System.getProperty("java.home") + "/bin/java",
-					"-Dagent.port=" + port, AgentServer.class.getName());
+			builder.command(commands);
 			builder.environment().put("CLASSPATH", System.getProperty("java.class.path"));
 			Process process = builder.start();
 

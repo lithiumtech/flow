@@ -133,7 +133,7 @@ public class Vaults {
 		Vault vault = new SecureVault(config, store);
 		if (config.getBoolean("vault.agent", true)) {
 			log.info("starting vault agent");
-			vault = new AgentVault(vault, store);
+			vault = new AgentVault(vault, store, config);
 		}
 		if (config.getBoolean("vault.env", false)) {
 			if (!vault.unlock(System.getenv("VAULT_PASSWORD"))) {

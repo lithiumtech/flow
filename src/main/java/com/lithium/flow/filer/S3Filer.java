@@ -398,6 +398,8 @@ public class S3Filer implements Filer {
 		ClientConfiguration cc = new ClientConfiguration();
 		cc.setMaxErrorRetry(config.getInt("s3.maxErrorRetry", 3));
 		cc.setConnectionTimeout((int) config.getTime("s3.connectionTimeout", "10s"));
+		cc.setConnectionTTL(config.getTime("s3.connectionTTL", "-1"));
+		cc.setConnectionMaxIdleMillis(config.getTime("s3.connectionMaxIdleMillis", "1m"));
 		cc.setRequestTimeout((int) config.getTime("s3.requestTimeout", "0"));
 		cc.setSocketTimeout((int) config.getTime("s3.socketTimeout", "50s"));
 		cc.setClientExecutionTimeout((int) config.getTime("s3.clientExecutionTimeout", "0"));

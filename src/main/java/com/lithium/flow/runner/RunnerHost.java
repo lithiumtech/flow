@@ -108,8 +108,8 @@ public class RunnerHost implements Closeable {
 		log.debug("wrote: {}", configOut);
 
 		List<String> classpathList = new ArrayList<>();
-		context.getLibs().forEach(lib -> classpathList.add(libDir + "/" + RecordPath.getName(lib)));
 		context.getModules().forEach(module -> classpathList.add(moduleDir + "/" + module));
+		context.getLibs().forEach(lib -> classpathList.add(libDir + "/" + RecordPath.getName(lib)));
 
 		String classpath = Joiner.on(":").join(classpathList);
 		log.debug("classpath: {}", classpath);

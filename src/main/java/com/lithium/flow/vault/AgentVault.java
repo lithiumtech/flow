@@ -24,10 +24,12 @@ import com.lithium.flow.store.MemoryStore;
 import com.lithium.flow.store.Store;
 import com.lithium.flow.util.Logs;
 import com.lithium.flow.util.Passwords;
+import com.lithium.flow.util.Unchecked;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -54,6 +56,7 @@ public class AgentVault implements Vault {
 	private final Vault delegate;
 	private final Store store;
 	private final Config config;
+	private final String hostname = Unchecked.get(() -> InetAddress.getLocalHost().getHostName());
 
 	public AgentVault(@Nonnull Vault delegate, @Nonnull Store store, @Nonnull Config config) {
 		this.delegate = checkNotNull(delegate);
@@ -127,16 +130,21 @@ public class AgentVault implements Vault {
 
 	@Nullable
 	private String readAgent() {
-		String agentPort = store.getValue("vault.agent.port");
-		String agentPassword = store.getValue("vault.agent.password");
-		if (agentPort == null || agentPassword == null) {
+		String agent = store.getValue("vault.agent@" + hostname);
+		if (agent == null) {
 			return null;
 		}
 
-		try {
-			int port = Integer.parseInt(agentPort);
-			Socket socket = new Socket();
-			socket.connect(new InetSocketAddress("localhost", port), 5000);
+		int index = agent.indexOf(":");
+		if (index == -1) {
+			return null;
+		}
+
+		int agentPort = Integer.parseInt(agent.substring(0, index));
+		String agentPassword = agent.substring(index + 1);
+
+		try (Socket socket = new Socket()) {
+			socket.connect(new InetSocketAddress("localhost", agentPort), 5000);
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> map = mapper.readValue(socket.getInputStream(), Map.class);
@@ -181,8 +189,7 @@ public class AgentVault implements Vault {
 			mapper.writeValue(out, map);
 			out.close();
 
-			store.putValue("vault.agent.port", String.valueOf(port));
-			store.putValue("vault.agent.password", agentPassword);
+			store.putValue("vault.agent@" + hostname, port + ":" + agentPassword);
 		} catch (IOException e) {
 			throw new VaultException("failed to start agent", e);
 		}

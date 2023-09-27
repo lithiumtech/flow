@@ -103,19 +103,19 @@
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk-s3</artifactId>
-			<version>1.12.546</version>
+			<version>1.12.558</version>
 			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk-sts</artifactId>
-			<version>1.12.546</version>
+			<version>1.12.558</version>
 			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk-ssm</artifactId>
-			<version>1.12.546</version>
+			<version>1.12.558</version>
 			<optional>true</optional>
 		</dependency>
 		<dependency>
@@ -169,7 +169,7 @@
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-compress</artifactId>
-			<version>1.23.0</version>
+			<version>1.24.0</version>
 			<optional>true</optional>
 		</dependency>
 		<dependency>
@@ -218,6 +218,10 @@
 					<groupId>org.eclipse.jetty</groupId>
 					<artifactId>*</artifactId>
 				</exclusion>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>*</artifactId>
+				</exclusion>
 			</exclusions>
 		</dependency>
 		<dependency>
@@ -241,7 +245,7 @@
 		<dependency>
 			<groupId>redis.clients</groupId>
 			<artifactId>jedis</artifactId>
-			<version>5.0.0</version>
+			<version>5.0.1</version>
 			<optional>true</optional>
 		</dependency>
 		<dependency>
@@ -303,7 +307,7 @@
 		<dependency>
 			<groupId>org.xerial.snappy</groupId>
 			<artifactId>snappy-java</artifactId>
-			<version>1.1.10.3</version>
+			<version>1.1.10.5</version>
 			<optional>true</optional>
 		</dependency>
 		<dependency>
@@ -321,19 +325,19 @@
 		<dependency>
 			<groupId>io.netty</groupId>
 			<artifactId>netty-codec</artifactId>
-			<version>4.1.97.Final</version>
+			<version>4.1.98.Final</version>
 			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>io.netty</groupId>
 			<artifactId>netty-codec-http</artifactId>
-			<version>4.1.97.Final</version>
+			<version>4.1.98.Final</version>
 			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>io.netty</groupId>
 			<artifactId>netty-codec-http2</artifactId>
-			<version>4.1.97.Final</version>
+			<version>4.1.98.Final</version>
 			<optional>true</optional>
 		</dependency>
 		<dependency>

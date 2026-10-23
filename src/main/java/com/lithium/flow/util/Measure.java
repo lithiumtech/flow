@@ -19,21 +19,31 @@ package com.lithium.flow.util;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.function.Function;
+import java.util.function.LongSupplier;
 
 import javax.annotation.Nonnull;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
-import com.google.common.primitives.Longs;
 
 /**
  * @author Matt Ayres
  */
 public class Measure {
+	/** Seconds of per-second history that {@link #avg(long)} can see, beyond the start of the measure. */
+	static final int HISTORY = 3600;
+	private static final int PADDING = 1024;
+	private static final int MAX_BINS = HISTORY + PADDING + 1;
+
 	private final String name;
 	private final Function<Number, String> printer;
+	private final LongSupplier clock;
 	private final Multiset<Object> uniques = HashMultiset.create();
-	private long[] bins = new long[1024];
+	private long[] bins = new long[PADDING];
+	/** Bin number held in {@code bins[0]}. Bins before it are dropped and only their sum is kept. */
+	private int firstBin;
+	/** Sum of the values of the bins before {@link #firstBin}. */
+	private long pastDone;
 	private long startTime;
 	private long todo;
 	private long done;
@@ -41,8 +51,13 @@ public class Measure {
 	private boolean hideAvg;
 
 	public Measure(@Nonnull String name, @Nonnull Function<Number, String> printer) {
+		this(name, printer, System::currentTimeMillis);
+	}
+
+	Measure(@Nonnull String name, @Nonnull Function<Number, String> printer, @Nonnull LongSupplier clock) {
 		this.name = checkNotNull(name);
 		this.printer = checkNotNull(printer);
+		this.clock = checkNotNull(clock);
 	}
 
 	public boolean isForEta() {
@@ -120,13 +135,33 @@ public class Measure {
 	}
 
 	public synchronized void addDone(long value) {
+		long time = clock.getAsLong();
 		if (startTime == 0) {
-			startTime = System.currentTimeMillis();
+			startTime = time;
 		}
 
-		int bin = getBin(System.currentTimeMillis());
-		bins = Longs.ensureCapacity(bins, bin + 1, 1024);
-		bins[bin] += value;
+		int bin = getBin(time);
+		if (bin >= firstBin + bins.length) {
+			// grow as before, to this bin plus padding, but keep at most MAX_BINS bins:
+			// one bin per second since the start would otherwise grow without bound
+			int endBin = bin + 1 + PADDING;
+			int newFirstBin = Math.max(firstBin, endBin - MAX_BINS);
+			int keep = Math.max(0, firstBin + bins.length - newFirstBin);
+			for (int i = 0; i < bins.length - keep; i++) {
+				pastDone += bins[i];
+			}
+
+			long[] newBins = new long[endBin - newFirstBin];
+			System.arraycopy(bins, bins.length - keep, newBins, 0, keep);
+			bins = newBins;
+			firstBin = newFirstBin;
+		}
+
+		if (bin >= 0 && bin < firstBin) {
+			pastDone += value;
+		} else {
+			bins[bin - firstBin] += value;
+		}
 		done += value;
 	}
 
@@ -147,22 +182,32 @@ public class Measure {
 		return todo - done;
 	}
 
+	/**
+	 * Average per second over the whole seconds of the last {@code interval}. Exact for an interval of up to
+	 * {@link #HISTORY} or one that reaches back to the start of the measure; any other longer interval is
+	 * averaged over the last {@link #HISTORY} seconds of it.
+	 */
 	public synchronized double avg(long interval) {
 		if (startTime == 0) {
 			return 0;
 		}
 
-		long time = System.currentTimeMillis();
+		long time = clock.getAsLong();
 		int startBin = Math.max(0, getBin(time - interval));
 		int endBin = getBin(time);
 		if (startBin == endBin) {
 			return 0;
 		}
 
+		int stopBin = Math.min(endBin, firstBin + bins.length - 1);
 		double total = 0;
 		double count = 0;
-		for (int i = startBin; i < Math.min(endBin, bins.length - 1); i++) {
-			total += bins[i];
+		if (startBin == 0 && firstBin > 0) {
+			total += pastDone;
+			count += Math.min(firstBin, stopBin);
+		}
+		for (int i = Math.max(startBin, firstBin); i < stopBin; i++) {
+			total += bins[i - firstBin];
 			count++;
 		}
 		return total / count;

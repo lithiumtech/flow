@@ -22,6 +22,7 @@ import com.lithium.flow.config.Config;
 import com.lithium.flow.config.ConfigBuilder;
 import com.lithium.flow.config.Configs;
 import com.lithium.flow.config.Repo;
+import com.lithium.flow.config.exception.ConfigNotFoundException;
 import com.lithium.flow.filer.Filer;
 import com.lithium.flow.filer.Record;
 import com.lithium.flow.io.Swallower;
@@ -111,14 +112,25 @@ public class FilerRepo implements Repo {
 		}
 
 		if (record == null || !record.exists()) {
-			throw new FileNotFoundException("no config entry: " + fullPaths);
+			throw new ConfigNotFoundException("no config entry: " + fullPaths);
 		}
 
+		String entryPath = fullPath;
 		ConfigBuilder builder = supplier.get();
 		for (Filer filer : filers) {
 			builder.addLoader(path -> {
 				Record pathRecord = filer.getRecord(path);
-				return pathRecord.exists() && pathRecord.isFile() ? filer.readFile(path) : null;
+				if (!pathRecord.exists() || !pathRecord.isFile()) {
+					return null;
+				}
+				try {
+					return filer.readFile(path);
+				} catch (FileNotFoundException e) {
+					if (path.equals(entryPath)) {
+						throw new ConfigNotFoundException("config entry no longer exists: " + entryPath, e);
+					}
+					throw e;
+				}
 			});
 		}
 		builder.allowFileNotFound(true);

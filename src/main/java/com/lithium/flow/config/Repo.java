@@ -16,6 +16,8 @@
 
 package com.lithium.flow.config;
 
+import com.lithium.flow.config.exception.ConfigNotFoundException;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,7 +40,11 @@ public interface Repo extends Closeable {
 	default List<Config> getConfigs() throws IOException {
 		List<Config> configs = new ArrayList<>();
 		for (String name : getNames()) {
-			configs.add(getConfig(name));
+			try {
+				configs.add(getConfig(name));
+			} catch (ConfigNotFoundException e) {
+				// deleted after it was listed
+			}
 		}
 		return configs;
 	}

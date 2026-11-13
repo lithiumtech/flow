@@ -168,6 +168,13 @@ public class ParallelRepoTest {
 	}
 
 	@Test
+	public void sequentialGetConfigsSkipsConfigDeletedAfterListing() throws Exception {
+		try (Repo repo = new CachedRepo(deleteAfterListing(filerRepo(), "prod/c3.config"), 60000)) {
+			assertEquals("[c1:one, c2:two]", describe(repo.getConfigs()));
+		}
+	}
+
+	@Test
 	public void configWithoutEntryRecordIsSkipped() throws Exception {
 		Filer filer = new SvnFiler(provider);
 		Repo repo = new ParallelRepo(deleteAfterListing(new FilerRepo(Collections.singletonList(filer),

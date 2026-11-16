@@ -129,7 +129,9 @@ public class FilerRepo implements Repo {
 					if (path.equals(entryPath)) {
 						throw new ConfigNotFoundException("config entry no longer exists: " + entryPath, e);
 					}
-					throw e;
+					// deleted after it was listed: same as an include the listing does not show,
+					// so allowFileNotFound decides
+					return null;
 				}
 			});
 		}

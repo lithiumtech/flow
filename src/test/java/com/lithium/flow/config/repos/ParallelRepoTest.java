@@ -17,6 +17,7 @@
 package com.lithium.flow.config.repos;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -183,13 +184,39 @@ public class ParallelRepoTest {
 	}
 
 	@Test
-	public void missingIncludeOfExistingConfigFailsThePass() throws Exception {
+	public void includeDeletedAfterListingIsBuiltWithoutTheInclude() throws Exception {
 		Repo repo = new ParallelRepo(deleteAfterListing(filerRepo(), "prod/inc.include"), parallelConfig(1));
-		try {
-			repo.getConfigs();
-			fail("expected IOException");
-		} catch (IOException e) {
-			assertTrue(e.getMessage(), e.getMessage().contains("[c2]"));
+		List<Config> configs = repo.getConfigs();
+		assertEquals("[c1:one, c2:two, c3:three]", describe(configs));
+		Config c2 = configs.stream().filter(config -> config.getName().equals("c2")).findFirst().get();
+		assertFalse(c2.containsKey("included"));
+	}
+
+	@Test
+	public void includeDeletedAfterListingBuildsTheSameConfigAsIncludeDeletedBeforeListing() throws Exception {
+		delete("prod/inc.include");
+		Config before = filerRepo().getConfig("c2");
+		setUpInclude();
+		Repo race = deleteAfterListing(filerRepo(), "prod/inc.include");
+		race.getNames();
+		Config after = race.getConfig("c2");
+		assertEquals(before.asRawMap(), after.asRawMap());
+	}
+
+	@Test
+	public void includeDeletedAfterListingDoesNotBlockFirstScheduledPass() throws Exception {
+		Repo parallel = new ParallelRepo(deleteAfterListing(filerRepo(), "prod/inc.include"), parallelConfig(3));
+		try (Repo repo = new ScheduledRepo(parallel, TimeUnit.MINUTES.toMillis(5), 0)) {
+			List<String> names = CompletableFuture.supplyAsync(() -> {
+				try {
+					return repo.getNames();
+				} catch (IOException e) {
+					throw new UncheckedIOException(e);
+				}
+			}).get(30, TimeUnit.SECONDS);
+			Collections.sort(names);
+			assertEquals("[c1, c2, c3]", names.toString());
+			assertFalse(repo.getConfig("c2").containsKey("included"));
 		}
 	}
 
@@ -283,6 +310,13 @@ public class ParallelRepoTest {
 		} catch (SVNException e) {
 			throw new IOException(e);
 		}
+	}
+
+	private void setUpInclude() throws Exception {
+		File file = temp.newFile("inc.include");
+		Files.write(file.toPath(), "included = yes\n".getBytes(StandardCharsets.UTF_8));
+		client.getCommitClient().doImport(file, url.appendPath("prod/inc.include", false), "re-add", null, false,
+				false, SVNDepth.EMPTY);
 	}
 
 	private static void write(@Nonnull File dir, @Nonnull String name, @Nonnull String text) throws IOException {

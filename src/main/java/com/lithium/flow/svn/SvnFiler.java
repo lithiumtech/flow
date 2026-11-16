@@ -25,6 +25,7 @@ import com.lithium.flow.io.DataIo;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -37,6 +38,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 
 import org.tmatesoft.svn.core.SVNDirEntry;
+import org.tmatesoft.svn.core.SVNErrorCode;
 import org.tmatesoft.svn.core.SVNException;
 import org.tmatesoft.svn.core.SVNLogEntry;
 import org.tmatesoft.svn.core.SVNNodeKind;
@@ -142,6 +144,11 @@ public class SvnFiler implements Filer {
 			}
 			repository.getFile(path, useRevision, new SVNProperties(), out);
 		} catch (SVNException e) {
+			if (SVNErrorCode.FS_NOT_FOUND.equals(e.getErrorMessage().getErrorCode())) {
+				FileNotFoundException notFound = new FileNotFoundException("file not found: " + getFullPath(path));
+				notFound.initCause(e);
+				throw notFound;
+			}
 			throw new IOException("failed to read file: " + getFullPath(path), e);
 		} finally {
 			svnProvider.releaseRepository(repository);

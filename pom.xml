@@ -10,7 +10,7 @@
 
 	<groupId>com.lithium.flow</groupId>
 	<artifactId>flow</artifactId>
-	<version>0.7.51-SNAPSHOT</version>
+	<version>0.7.51</version>
 
 	<build>
 		<plugins>
